@@ -113,7 +113,7 @@ library(RcmdrMisc)
 
 ```{r}
 # Import data csv file
-df_1 <- read.csv(
+df_dat1 <- read.csv(
   file.path("chap2data1.csv"),
   sep    = ",",
   header = TRUE
@@ -122,15 +122,15 @@ df_1 <- read.csv(
 
 ```{r}
 #view the data
-head(df_1)
-tail(df_1)
+head(df_dat1)
+tail(df_dat1)
 ```
 
 ```{r}
 # This performs a two-sided t-test to check if the mean of Comb_mass is significantly different from 120.
-t.test(df_1$`Comb_mass`,alternative="two.sided",mu=120)
-#t.test(df_1$`Comb_mass`,alternative="greater",mu=90)
-#t.test(df_1$`Comb_mass`,alternative="less",mu=100)
+t.test(df_dat1$`Comb_mass`,alternative="two.sided",mu=120)
+#t.test(df_dat1$`Comb_mass`,alternative="greater",mu=90)
+#t.test(df_dat1$`Comb_mass`,alternative="less",mu=100)
 
 
 ```
@@ -151,7 +151,7 @@ Proper *randomisation* in the sampling procedure should ensure independence of t
 
 ```{r}
 # Shapiro-Wilk test for normality assumption
-shapiro.test(df_1$`Comb_mass`)
+shapiro.test(df_dat1$`Comb_mass`)
 ```
 
 #### 2.2.2 Interpretation of the shapiro-Wilk normality test
@@ -172,7 +172,7 @@ Given that the p-value is greater than the commonly used significance level of 0
 Based on the results of the Shapiro-Wilk test, it is reasonable to conclude that the `Comb_mass` data is likely normally distributed. Therefore, assumptions of normality for subsequent analyses are likely met.
 
 ```{r}
-qqPlot(df_1$`Comb_mass`,main="QQ plot",ylab="Comb mass",xlab="Quantiles")
+qqPlot(df_dat1$`Comb_mass`,main="QQ plot",ylab="Comb mass",xlab="Quantiles")
 ```
 
 #### I.2.3 Interpretation of the QQ Plot Interpretation
@@ -219,15 +219,15 @@ If the data are not normal, the data can be transformed, or a non-parametric tes
 Import into R the file chap2data2.csv.
 
 ```{r}
-df_2 <-read.csv("chap2data2.csv", sep=",", header=T)
+df_dat2 <-read.csv("chap2data2.csv", sep=",", header=T)
 ```
 
 ```{r}
-head(df_2)
-tail(df_2)
+head(df_dat2)
+tail(df_dat2)
 ```
 ```{r}
-View(df_2)
+View(df_dat2)
 ```
 
 The data represent 15-day comb masses of eleven male chicks that each received sex hormone A, and 15-day comb masses of eleven other male chicks that each received sex hormone B. The chicks were randomly assigned to receive one of the two sex hormones.
@@ -244,11 +244,11 @@ Let us use the F-test for homoscedasticity
 
 ```{r}
 # Calculate variances 
-with(df_2, tapply(Comb_mass, Hormone,
+with(df_dat2, tapply(Comb_mass, Hormone,
 var, na.rm=TRUE))
 
 # Perform F-test
-var.test(Comb_mass~Hormone,alternative="two.sided",data=df_2)
+var.test(Comb_mass~Hormone,alternative="two.sided",data=df_dat2)
 ```
 
 #### 2.3.1- Interpretation of F-Test for Equality of Variances
@@ -290,17 +290,17 @@ If the data consist of paired observations, consider a t-test for dependent samp
 
 ```{r}
 #Checking normality assumption (two or more groups simultaneously)
-shapiro.test(df_2[df_2[,"Hormone"]=="A","Comb_mass"])
-shapiro.test(df_2[df_2[,"Hormone"]=="B","Comb_mass"])
+shapiro.test(df_dat2[df_dat2[,"Hormone"]=="A","Comb_mass"])
+shapiro.test(df_dat2[df_dat2[,"Hormone"]=="B","Comb_mass"])
 ```
 
 ```{r}
 #t test
-t.test(x=chap2data2[1:11,"Comb_mass"],y=chap2data2[12:22,"Comb_mass"],alternative="two.sided",mu=0)
-t.test(Comb_mass~Hormone,data=chap2data2)
+t.test(x=df_dat2[1:11,"Comb_mass"],y=df_dat2[12:22,"Comb_mass"],alternative="two.sided",mu=0)
+t.test(Comb_mass~Hormone,data=df_dat2)
 ```
 
-#### I.3.2- Two-Sample t-Test Interpretation
+#### 2.3.2- Two-Sample t-Test Interpretation
 
 The two-sample t-test was conducted to determine if there is a significant difference in the mean `Comb_mass` between two groups from the `chap2data2` dataset.
 
@@ -330,7 +330,7 @@ Given the p-value and the confidence interval, we **reject the null hypothesis**
 
 This result indicates that the factor associated with Group X leads to a higher `Comb_mass` compared to Group Y. Further investigation may be required to understand the underlying factors contributing to this difference.
 
-### I.4 Two dependent samples t-test (C&S 5.8, p. 46)
+### 2.4 Two dependent samples t-test (C&S 5.8, p. 46)
 
 Often, the data from two samples are not unrelated but *paired*. For example, ten people are about to embark on a diet: they are weighed *before* and again *after*. The same people are weighed twice. This is done either by
 
@@ -338,12 +338,12 @@ Often, the data from two samples are not unrelated but *paired*. For example, te
 
 2- manually calculating a column of differences in the paired values and then performing a one- sample t-test on this new column.
 
-Import the *before* and *after* masses from the file chap2data3.csv. Note the format of the data.
+Import the *before* and *after* masses from the file df_dat3.csv. Note the format of the data.
 
 ```{r}
-chap2data3 <-read.csv("chap2data3.csv", sep=",", header=T)
-head(chap2data3)
-tail(chap2data3)
+df_dat3 <-read.csv("df_dat3.csv", sep=",", header=T)
+head(df_dat3)
+tail(df_dat3)
 ```
 
 Now test the following hypotheses:
@@ -354,29 +354,29 @@ Now test the following hypotheses:
 
 ```{r}
 # That the diet has no effect (or is ineffective).
-with(chap2data3,(t.test(Before,After,alternative='two.sided',conf.level=.95, paired=TRUE)))
+with(df_dat3,(t.test(Before,After,alternative='two.sided',conf.level=.95, paired=TRUE)))
 
-#Creating a variable, Diff (which is the difference between before and after) in the chap2data3 data set
-chap2data3$Diff <- chap2data3[,2] - chap2data3[,1]
+#Creating a variable, Diff (which is the difference between before and after) in the df_dat3 data set
+df_dat3$Diff <- df_dat3[,2] - df_dat3[,1]
 ```
 
 This test is based on the assumption that the *paired differences* are normally distributed and independent of one another. The assumption of normality can be tested in the same way as in the one sample case, but based on a column of differences in the paired values. Use *R* to check whether the paired differences of the weight loss data came from a normally distributed population. Once again, if the assumption of normality is not valid, the differences can be transformed, or a non- parametric test can be performed instead of a t-test.
 
 ```{r}
 #Checking the normality of the differences
-head(chap2data3)
-shapiro.test(chap2data3$Diff)
+head(df_dat3)
+shapiro.test(df_dat3$Diff)
 ```
 
-### I.5 Power analysis
+### 2.5 Power analysis
 
 Consider the following definitions:
 
 Type I error -- rejecting the null hypothesis when it is true (false positive) Type II error -- not rejecting the null hypothesis when it is false (false negative) Power -- the probability to not commit a type II error. A power analysis investigates and uses the relationship between power and sample size to determine the optimal sample size for your experiment. This relationship is investigated under various circumstances of natural variation, level of significance and effect sizes (smallest detectable differences).
 
-#### I.5.1 Learning by example
+#### 2.5.1 Learning by example
 
-Consider again the data in the file 'chap2data3.csv'. Let's investigate the relationship between power and sample size for the comb.mass variable given that the estimate of the natural variation is the pooled variance, the level of significance is equal to 5% and that we want to detect a difference between the two hormones as small as 35g. Calculate the power for sample sizes of 5, 7, 9, 11, 13 and 15. Visualize the results with a scatter plot. Investigate this relationship for changes in the smallest detectable difference (delta) values. Use 20g, 35g and 50g in the analysis. What is the effect of changing the sample size and the smallest detectable difference on power?
+Consider again the data in the file 'df_dat3.csv'. Let's investigate the relationship between power and sample size for the comb.mass variable given that the estimate of the natural variation is the pooled variance, the level of significance is equal to 5% and that we want to detect a difference between the two hormones as small as 35g. Calculate the power for sample sizes of 5, 7, 9, 11, 13 and 15. Visualize the results with a scatter plot. Investigate this relationship for changes in the smallest detectable difference (delta) values. Use 20g, 35g and 50g in the analysis. What is the effect of changing the sample size and the smallest detectable difference on power?
 
 ```{r}
 #power analysis
@@ -426,7 +426,7 @@ plot(pwrTable,main="When delta=20g")
 
 ```
 
-### I.6- Exercises
+### 2.6- Exercises
 
 ##### Exercise 1
 

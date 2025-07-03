@@ -615,5 +615,3 @@ The data in C&S Example 3.2 (p. 18) (chap1exer3.csv), presents the yields (g) of
 -   produce a histogram
 
 -   produce a box plot.
-
-
