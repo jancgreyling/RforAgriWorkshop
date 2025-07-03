@@ -1,0 +1,134 @@
+---
+title: "Non-parametric methods"
+format: html
+editor: visual
+---
+
+# I- Introduction
+
+(See Biometry 721-821 workbook (2024))
+
+## Import data
+
+```{r}
+chap5data1 <- read.csv("chap5data1.csv", sep=",", header=T)
+chap5data2 <- read.csv("chap5data2.csv", sep=",", header=T)
+chap5data3 <- read.csv("chap5data3.csv", sep=",", header=T)
+chap5data4 <- read.csv("chap5data4.csv", sep=",", header=T)
+View(chap5data1)
+View(chap5data2)
+View(chap5data3)
+View(chap5data4)
+```
+
+## Example 1 - Wilcoxon rank sum test
+
+```{r}
+wilcox.test(Rating~Medication,alternative="two.sided",data=chap5data1)
+```
+
+## Wilcoxon Rank Sum Test Results
+
+The Wilcoxon rank sum test was conducted to compare the ratings between two groups. The test statistic (W) was 68.5, with a p-value of 0.06429.
+
+**Interpretation:**
+
+-   The p-value of 0.06429 suggests that there is a 6.43% probability of observing the data, or something more extreme, under the null hypothesis that there is no difference in the ratings between the two groups.
+-   Since this p-value is slightly above the common significance level of 0.05, we fail to reject the null hypothesis. This means we do not have enough evidence to conclude that there is a statistically significant difference in the ratings between the two groups.
+-   However, the result is marginal, and there may be practical significance depending on the context of the study.
+
+**Note:** The warning "cannot compute exact p-value with ties" indicates that the data contained ties, and therefore, the exact p-value could not be computed. The test instead provides an approximate p-value using a continuity correction.
+
+## Example 2 - Wilcoxon matched-pair signed-rank test
+
+```{r}
+with(chap5data2,wilcox.test(Virus_A, Virus_B, alternative='two.sided',paired=TRUE))
+```
+
+### Wilcoxon Signed-Rank Test
+
+The Wilcoxon signed-rank test was conducted to compare the paired samples of Virus_A and Virus_B. Due to the presence of ties in the data, an exact p-value could not be computed, and an approximation with continuity correction was used.
+
+-   **Test Statistic (V):** 34
+-   **p-value:** 0.02917
+
+The p-value suggests that there is a statistically significant difference between Virus_A and Virus_B (p \< 0.05). Therefore, we reject the null hypothesis, indicating that the true location shift between the paired samples is not equal to zero.
+
+## Example 3 - Kruskal-Wallis
+
+```{r}
+with(chap5data3,tapply(Caterpillars,Treatment,median,na.rm=TRUE))
+kruskal.test(Caterpillars~Treatment, data=chap5data3)
+```
+
+### Kruskal-Wallis Rank Sum Test
+
+The Kruskal-Wallis rank sum test was conducted to compare the distribution of caterpillar counts across four different treatment groups (A, B, C, and D). The median response values of each group are as follows:
+
+-   **Group A:** 8 caterpillars
+
+-   **Group B:** 22 caterpillars
+
+-   **Group C:** 31 caterpillars
+
+-   **Group D:** 85 caterpillars
+
+-   **Test Statistic (Kruskal-Wallis chi-squared):** 17.481
+
+-   **Degrees of Freedom:** 3
+
+-   **p-value:** 0.0005628
+
+The test results suggest that there are statistically significant differences in caterpillar counts across the treatment groups (p \< 0.05). Therefore, we reject the null hypothesis, indicating that the distributions of caterpillar counts are not the same across all treatments.
+
+## Example 4 - Friedman test
+
+```{r}
+Responses <- na.omit(with(chap5data4, cbind(Wine_A, Wine_B, Wine_C, Wine_D)))
+cat("\nMedians:\n") 
+apply(Responses, 2, median) 
+friedman.test(Responses)
+#OR (remove # to run)
+#friedman.test(na.omit(with(chap5data4, cbind(Wine_A, Wine_B, Wine_C, Wine_D))))
+#OR remove # to run)
+#friedman.test(as.matrix(chap5data4[,2:5]))
+
+```
+
+### Friedman Rank Sum Test
+
+The Friedman rank sum test was performed to evaluate the differences in responses to four different wines (Wine_A, Wine_B, Wine_C, and Wine_D). The median response values for each wine were as follows:
+
+-   **Wine_A:** 2.5
+
+-   **Wine_B:** 2.5
+
+-   **Wine_C:** 1.0
+
+-   **Wine_D:** 3.5
+
+-   **Test Statistic (Friedman chi-squared):** 11.16
+
+-   **Degrees of Freedom:** 3
+
+-   **p-value:** 0.01089
+
+The test results indicate that there are statistically significant differences in the responses to the different wines (p \< 0.05). Therefore, we reject the null hypothesis, suggesting that the wines are not rated equally by the participants.
+
+# II- Exercises
+
+Exercise 1
+
+See C&S Example 19.4 (p. 300) (chap5exer1.csv). Perform a non-parametric test on the data to determine if the two wheat varieties differ significantly. State your conclusion clearly.
+
+Exercise 2
+
+See C&S Example 19.5 (p. 303) (chap5exer2.csv). Using the data, perform a non-parametric test to determine if the yields of the four wheat varieties are equal. State you conclusion clearly.
+
+Exercise 3
+
+See C&S Example 19.6 (p. 305) (chap5exer3.csv). Perform a non-parametric test on the data to determine if the four wheat varieties that were compared using a Random Block design differed.
+
+Exercise 4
+
+See C&S Example 19.3 (p. 298) (chap5exer4.csv). Perform a non-parametric test on the data to determine if there is a difference between the two fungal strains.

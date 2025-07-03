@@ -1,0 +1,285 @@
+---
+title: "MLR"
+format: html
+editor: visual
+---
+
+# Load required packages
+
+```{r}
+library(RcmdrMisc)
+library(ggplot2)
+library(car)
+library(MASS)
+```
+
+## Importing data
+
+```{r}
+chap7data2 <- read.csv("chap7data2.csv", sep=",", header=T)
+chap7data3 <- read.csv("chap7data3.csv", sep=",", header=T)
+View(chap7data2)
+View(chap7data3)
+```
+
+#scatter plot
+
+```{r}
+# Scatter plots of 'Detox' against each enzyme
+ggplot(chap7data2, aes(x = Enzyme1, y = Detox)) + geom_point() + ggtitle("Detox vs Enzyme1") +
+  theme_minimal()
+ggplot(chap7data2, aes(x = Enzyme2, y = Detox)) + geom_point() + ggtitle("Detox vs Enzyme2") +
+  theme_minimal()
+ggplot(chap7data2, aes(x = Enzyme3, y = Detox)) + geom_point() + ggtitle("Detox vs Enzyme3") +
+  theme_minimal()
+ggplot(chap7data2, aes(x = Enzyme4, y = Detox)) + geom_point() + ggtitle("Detox vs Enzyme4") +
+  theme_minimal()
+ggplot(chap7data2, aes(x = Enzyme5, y = Detox)) + geom_point() + ggtitle("Detox vs Enzyme5") +
+  theme_minimal()
+```
+
+#or
+
+```{r}
+plot(chap7data2)
+```
+
+#or
+
+```{r}
+scatterplotMatrix(~Detox + Enzyme1 + Enzyme2 + Enzyme3 + Enzyme4 + Enzyme5,
+                  reg.line = lm,
+                  smooth = FALSE,
+                  spread = FALSE,
+                  span = 0.5,
+                  ellipse = FALSE,
+                  levels = c(0.5, 0.9),
+                  id.n = 0,
+                  diagonal = 'density',
+                  data = chap7data2)
+```
+
+## Interpretation
+
+This document provides an interpretation of the scatterplot matrix that includes the response variable (`Detox`) and explanatory variables (`Enzyme1`, `Enzyme2`, `Enzyme3`, `Enzyme4`, and `Enzyme5`). The scatterplot matrix is used to visualize the relationships between these variables and identify potential correlations.
+
+### 1. Relationships Between `Detox` and Each Enzyme
+
+-   **`Detox` vs. `Enzyme1`**:\
+    There is a positive linear relationship, as indicated by the upward trend in the scatter plot. The regression line is slightly upward, and the points are moderately scattered around it, suggesting a moderate positive correlation.
+
+-   **`Detox` vs. `Enzyme2`**:\
+    The scatter plot shows a very weak relationship with a mostly horizontal regression line. The points are widely scattered without any discernible pattern, suggesting little to no linear relationship between `Detox` and `Enzyme2`.
+
+-   **`Detox` vs. `Enzyme3`**:\
+    The plot shows a positive linear relationship, as evidenced by the upward trend and a moderately steep regression line. Points are somewhat dispersed, but there is a noticeable trend suggesting a moderate positive correlation.
+
+-   **`Detox` vs. `Enzyme4`**:\
+    There appears to be a slight negative linear relationship. The regression line slopes downward, but the points are widely scattered. This suggests a weak negative correlation between `Detox` and `Enzyme4`.
+
+-   **`Detox` vs. `Enzyme5`**:\
+    The scatter plot indicates a weak relationship with a relatively flat regression line. The points are fairly scattered, with no clear trend, suggesting little to no linear correlation between `Detox` and `Enzyme5`.
+
+### 2. Relationships Among Explanatory Variables (`Enzyme1` to `Enzyme5`)
+
+-   **`Enzyme1` vs. `Enzyme2`**:\
+    There is a noticeable positive linear relationship with an upward trend. The regression line is moderately steep, and points are clustered around it, indicating a moderate positive correlation.
+
+-   **`Enzyme1` vs. `Enzyme3`, `Enzyme4`, `Enzyme5`**:\
+    All these plots show relatively moderate positive linear relationships, with upward trends and points moderately clustered around the regression lines.
+
+-   **`Enzyme2` vs. `Enzyme3`**:\
+    The relationship appears to be non-linear, with points forming a curved pattern. This suggests a non-linear relationship between `Enzyme2` and `Enzyme3`.
+
+-   **`Enzyme2` vs. `Enzyme4`, `Enzyme5`**:\
+    These plots show no clear pattern, suggesting little to no linear relationship between `Enzyme2` and either `Enzyme4` or `Enzyme5`.
+
+-   **`Enzyme3` vs. `Enzyme4`**:\
+    There seems to be a positive relationship with an upward trend in the scatter plot, though the points are somewhat scattered, indicating a moderate positive correlation.
+
+-   **`Enzyme3` vs. `Enzyme5`**:\
+    Shows a weak or no discernible relationship, with the points widely scattered around a flat regression line.
+
+-   **`Enzyme4` vs. `Enzyme5`**:\
+    No clear relationship is observed here, as the points are scattered without any noticeable pattern.
+
+### 3. Diagonal Plots (Density Plots)
+
+-   The diagonal plots display the distribution of each variable. For example:
+    -   **`Detox`** appears to have a somewhat skewed distribution, possibly slightly left-skewed.
+    -   **`Enzyme1`** and **`Enzyme3`** appear to be normally distributed with slight variation.
+    -   **`Enzyme2`** shows a highly skewed distribution with a long tail.
+    -   **`Enzyme4`** and **`Enzyme5`** show more uniform distributions with less obvious skewness.
+
+### Conclusion
+
+-   `Detox` has a moderate positive relationship with `Enzyme1` and `Enzyme3`, suggesting these enzymes might be more influential in predicting `Detox` levels.
+-   `Enzyme2` and `Enzyme5` appear to have little to no linear relationship with `Detox`.
+-   The relationships among explanatory variables vary, with some moderate positive linear correlations (like `Enzyme1` with `Enzyme2`), and some non-linear or weak relationships.
+
+# Multiple linear regression
+
+```{r}
+chap7data2.model1 <- lm(Detox~.,data=chap7data2)
+summary(chap7data2.model1)
+```
+
+## #the allSubsets() function
+
+```{r}
+allSubsets <- function(data,y.name="Y",perf.measure=c("adj.r.squared","r.squared","AIC","perc.error")){
+  
+  Cols <- names(data)
+  Cols <- Cols[! Cols %in% y.name]
+  n <- length(Cols)
+  
+  id <- unlist(
+    lapply(1:n,
+           function(i)combn(1:n,i,simplify=F)
+    )
+    ,recursive=F)
+  
+  Formulas <- sapply(id,function(i)
+    paste(y.name,"~",paste(Cols[i],collapse="+"))
+  )
+  
+  result.mat <- matrix(0,nrow=length(Formulas),6)
+  result.mat[,1] <- Formulas
+  
+  #get all adjusted R2 values
+  for(i in 1:length(Formulas)){result.mat[i,2] <- summary(lm(as.formula(Formulas[i]),
+                                                             data=data))$adj.r.squared}
+  #get all R2 values
+  for(i in 1:length(Formulas)){result.mat[i,3] <- summary(lm(as.formula(Formulas[i]),
+                                                             data=data))$r.squared}
+  #get all AIC's
+  
+  for(i in 1:length(Formulas)){result.mat[i,4] <- AIC(lm(as.formula(Formulas[i]),
+                                                         data=data))}
+  #get all sigma's
+  
+  for(i in 1:length(Formulas)){result.mat[i,5] <- summary(lm(as.formula(Formulas[i]),
+                                                             data=data))$sigma/mean(data[,y.name])}
+  #get all mallows cp's
+  
+  for(i in 1:length(Formulas)){result.mat[i,6] <- mallows.cp(data=data,model=lm(as.formula(Formulas[i]),
+                                                                                data=data),y.name=y.name)}
+  
+  
+  
+  colnames(result.mat) <- c("Model","adj.r.squared","r.squared","AIC","perc.error","mallows.cp")
+  
+
+  
+  final.output <- data.frame(result.mat[order(result.mat[,perf.measure],decreasing=T),])
+  
+  return(final.output)
+  
+}
+
+```
+
+## calculating the Mallow's Cp statistic (function)
+
+```{r}
+mallows.cp <- function(data,model,y.name)
+{
+  
+  n <- nrow(data)
+  p <- length(model$coefficients)
+  
+  mean.sq.error <- summary(lm(as.formula(paste(y.name,"~.")),data=data))$sigma^2
+  
+  sse <- summary(model)$sigma^2*summary(model)$df[2]
+  
+  cp <- sse/mean.sq.error-(n-2*p)
+  cp/100
+}
+```
+
+# Variable selection
+
+```{r}
+stepwise(chap7data2.model1, direction='backward/forward', criterion='AIC')
+#or
+allSubsets(chap7data2,y.name="Detox",perf.measure="mallows.cp")
+```
+
+## Interpretation 1
+
+The stepwise regression analysis identified that the best model for predicting `Detox` includes the variables `Enzyme1`, `Enzyme4`, and `Enzyme5`. This model was chosen because it has the lowest Akaike Information Criterion (AIC) value (64.86), indicating the best balance between model complexity and fit.
+
+-   **Enzyme1** and **Enzyme4** have small positive effects on `Detox`, while **Enzyme5** has a larger positive effect.
+-   The variables `Enzyme2` and `Enzyme3` were excluded from the final model as they did not significantly improve the model's fit.
+
+This suggests that `Enzyme1`, `Enzyme4`, and `Enzyme5` are the most important predictors of `Detox` in this dataset.
+
+## Interpretation 2
+
+Based on the regression analysis and the adjusted R-squared values for various models, the following conclusions can be drawn:
+
+1.  **Best Model**: The model `Detox ~ Enzyme1 + Enzyme2 + Enzyme3` has the highest adjusted R-squared value of 0.6823. This indicates that it explains about 68.23% of the variability in `Detox` and is the best model among all those considered in terms of fit.
+
+2.  **Other Notable Models**:
+
+    -   The models `Detox ~ Enzyme1 + Enzyme2 + Enzyme5` (Adjusted R-squared: 0.6687) and `Detox ~ Enzyme1 + Enzyme2 + Enzyme4` (Adjusted R-squared: 0.6582) also have high adjusted R-squared values. These models provide a good fit and are close in performance to the best model.
+
+3.  **Poorly Performing Models**:
+
+    -   Models with adjusted R-squared values close to or below 0, such as `Detox ~ Enzyme5` (-0.1217) and `Detox ~ Enzyme3` (0.3014), indicate a poor fit. These models do not explain much of the variability in `Detox` and are not suitable for prediction.
+
+4.  **Model Selection**:
+
+    -   The top models to consider for predicting `Detox` are:
+        -   `Detox ~ Enzyme1 + Enzyme2 + Enzyme3` (Adjusted R-squared: 0.6823)
+        -   `Detox ~ Enzyme1 + Enzyme2 + Enzyme5` (Adjusted R-squared: 0.6687)
+        -   `Detox ~ Enzyme1 + Enzyme2 + Enzyme4` (Adjusted R-squared: 0.6582)
+    -   These models provide a good balance between complexity (number of variables) and explanatory power.
+
+### Conclusion:
+
+The best model based on adjusted R-squared is `Detox ~ Enzyme1 + Enzyme2 + Enzyme3`, which explains 68.23% of the variance in `Detox`. Models with fewer variables generally have lower adjusted R-squared values and may not provide sufficient explanatory power, while models with negative adjusted R-squared values should be discarded as they do not fit the data well.
+
+
+
+# Another example with data 3
+
+```{r}
+chap7data3.model1 <- lm(Y~.,data=chap7data3)
+#chap7data3.model1 <- lm(Y~X1+X2+X3+X4,data=chap7data3)
+summary(chap7data3.model1)
+
+vif(chap7data3.model1)
+
+base::plot(chap7data3)
+
+stepwise(chap7data3.model1, direction='backward', criterion='AIC')
+stepwise(chap7data3.model1, direction='forward', criterion='AIC')
+stepwise(chap7data3.model1, direction='backward/forward', criterion='AIC')
+
+allSubsets(chap7data3,y.name="Y",perf.measure="adj.r.squared")
+
+chap7data3.model2 <- lm(Y ~ X1 + X2 + X4,data=chap7data3)
+summary(chap7data3.model2)
+vif(chap7data3.model2)
+
+chap7data3.model3 <- lm(Y ~ X1 + X2,data=chap7data3)
+summary(chap7data3.model3)
+vif(chap7data3.model3)
+```
+
+#Assess normality
+
+```{r}
+shapiro.test(chap7data3.model3$residuals)
+```
+
+#Assess homoscedasticity
+
+```{r}
+plot(y=chap7data3.model3$residuals,x=chap7data3.model3$fitted.values,main="Residuals vs Yhat",ylab="residuals",xlab="Yhat")
+```
+
+
+# Exercises 
+Do all the exercices in page 58 on document "Biometry 721/821 Workbook(2024).pdf"

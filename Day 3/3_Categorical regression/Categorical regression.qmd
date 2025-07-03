@@ -1,0 +1,2021 @@
+---
+title: "Categorical regression"
+format: html
+editor: visual
+---
+
+#Required pacakges 
+
+```{r}
+install.packages("ROCR")
+library(RcmdrMisc)
+library(ggplot2)
+library(ROCR)
+```
+
+#Functions 
+##the allSubsets() function
+
+```{r}
+allSubsets.LogistReg <- function(data,y.name="Y",perf.measure=c("AIC","BIC")){
+  
+  Cols <- names(data)
+  Cols <- Cols[! Cols %in% y.name]
+  n <- length(Cols)
+  
+  id <- unlist(
+    lapply(1:n,
+           function(i)combn(1:n,i,simplify=F)
+    )
+    ,recursive=F)
+  
+  Formulas <- sapply(id,function(i)
+    paste(y.name,"~",paste(Cols[i],collapse="+"))
+  )
+  
+  result.mat <- matrix(0,nrow=length(Formulas),3)
+  result.mat[,1] <- Formulas
+  
+ 
+  #get all AIC's
+  
+  for(i in 1:length(Formulas)){result.mat[i,2] <- AIC(glm(as.formula(Formulas[i]),
+                                                         data=data,family=binomial))}
+  #get all BIC's
+  
+  for(i in 1:length(Formulas)){result.mat[i,3] <- BIC(glm(as.formula(Formulas[i]),
+                                                         data=data,family=binomial))}
+  
+  
+  
+  
+  colnames(result.mat) <- c("Model","AIC","BIC")
+  
+  
+  
+  final.output <- data.frame(result.mat[order(result.mat[,perf.measure],decreasing=T),])
+  
+  return(final.output)
+  
+}
+```
+
+#Calculate the gini coefficient for a binary classifier
+
+```{r}
+
+calcGini <- function(model,Y){
+  
+  if("ROCR" %in% installed.packages()[,"Package"] == "FALSE") stop("ROCR is not installed")
+  
+  library(ROCR)
+  
+  probs <- predict(model,type="response")
+  pred <- prediction(probs,Y)
+  perf <- performance(pred,'auc')
+  gini <- abs(1-2*attr(perf,'y.values')[[1]])
+  return(gini)
+}
+
+```
+
+#ROC Curve 
+
+```{r}
+performance <- function(prediction.obj, measure,
+                        x.measure="cutoff", ...) {
+
+    ## define the needed environments
+    envir.list <- .define.environments()
+    long.unit.names <- envir.list$long.unit.names
+    function.names <- envir.list$function.names
+    obligatory.x.axis <- envir.list$obligatory.x.axis
+    optional.arguments <- envir.list$optional.arguments
+    default.values <- envir.list$default.values
+    
+    ## abort in case of misuse
+    if (class(prediction.obj) != 'prediction' ||
+        !exists(measure, where=long.unit.names, inherits=FALSE) ||
+        !exists(x.measure, where=long.unit.names, inherits=FALSE)) {
+      stop(paste("Wrong argument types: First argument must be of type",
+                 "'prediction'; second and optional third argument must",
+                 "be available performance measures!"))
+    }
+    
+    ## abort, if attempt is made to use a measure that has an obligatory
+    ## x.axis as the x.measure (cannot be combined)
+    if (exists( x.measure, where=obligatory.x.axis, inherits=FALSE )) {
+        message <- paste("The performance measure",
+                         x.measure,
+                         "can only be used as 'measure', because it has",
+                         "the following obligatory 'x.measure':\n",
+                         get( x.measure, envir=obligatory.x.axis))
+        stop(message)
+    }
+
+    ## if measure is a performance measure with obligatory x.axis, then
+    ## enforce this axis:
+    if (exists( measure, where=obligatory.x.axis, inherits=FALSE )) {
+        x.measure <- get( measure, envir=obligatory.x.axis )
+    }
+
+    if (x.measure == "cutoff" ||
+        exists( measure, where=obligatory.x.axis, inherits=FALSE )) {
+
+        ## fetch from '...' any optional arguments for the performance
+        ## measure at hand that are given, otherwise fill up the default values
+        optional.args <- list(...)
+        argnames <- c()
+        if ( exists( measure, where=optional.arguments, inherits=FALSE )) {
+            argnames <- get( measure, envir=optional.arguments )
+            default.arglist <- list()
+            for (i in 1:length(argnames)) {
+                default.arglist <- c(default.arglist,
+                                     get(paste(measure,":",argnames[i],sep=""),
+                                         envir=default.values, inherits=FALSE))
+            }
+            names(default.arglist) <- argnames
+
+            for (i in 1:length(argnames)) {
+                templist <- list(optional.args,
+                                 default.arglist[[i]])
+                names(templist) <- c('arglist', argnames[i])
+                
+                optional.args <- do.call('.farg', templist)
+            }
+        }
+        optional.args <- .select.args( optional.args, argnames )
+        
+        ## determine function name
+        function.name <- get( measure, envir=function.names )
+
+        ## for each x-validation run, compute the requested performance measure
+        x.values <- list()
+        y.values <- list()
+        for (i in 1:length( prediction.obj@predictions )) {
+            argumentlist <- .sarg(optional.args,
+                                  predictions= prediction.obj@predictions[[i]],
+                                  labels= prediction.obj@labels[[i]],
+                                  cutoffs= prediction.obj@cutoffs[[i]],
+                                  fp= prediction.obj@fp[[i]],
+                                  tp= prediction.obj@tp[[i]],
+                                  fn= prediction.obj@fn[[i]],
+                                  tn= prediction.obj@tn[[i]],
+                                  n.pos= prediction.obj@n.pos[[i]],
+                                  n.neg= prediction.obj@n.neg[[i]],
+                                  n.pos.pred= prediction.obj@n.pos.pred[[i]],
+                                  n.neg.pred= prediction.obj@n.neg.pred[[i]])
+
+            ans <- do.call( function.name, argumentlist )
+
+            if (!is.null(ans[[1]])) x.values <- c( x.values, list( ans[[1]] ))
+            y.values <- c( y.values, list( ans[[2]] ))
+        }
+
+        if (! (length(x.values)==0 || length(x.values)==length(y.values)) ) {
+            stop("Consistency error.")
+        }
+        
+        ## create a new performance object
+        return( new("performance",
+                    x.name       = get( x.measure, envir=long.unit.names ),
+                    y.name       = get( measure, envir=long.unit.names ),
+                    alpha.name   = "none",
+                    x.values     = x.values,
+                    y.values     = y.values,
+                    alpha.values = list() ))
+    } else {
+        perf.obj.1 <- performance( prediction.obj, measure=x.measure, ... )
+        perf.obj.2 <- performance( prediction.obj, measure=measure, ... )
+        return( .combine.performance.objects( perf.obj.1, perf.obj.2 ) )
+    }
+}
+
+.combine.performance.objects <- function( p.obj.1, p.obj.2 ) {
+    ## some checks for misusage (in any way, this function is
+    ## only for internal use)
+    if ( p.obj.1@x.name != p.obj.2@x.name ) {
+        stop("Error: Objects need to have identical x axis.")
+    }
+    if ( p.obj.1@alpha.name != "none" || p.obj.2@alpha.name != "none") {
+        stop("Error: At least one of the two objects has already been merged.")
+    }
+    if (length(p.obj.1@x.values) != length(p.obj.2@x.values)) {
+        stop(paste("Only performance objects with identical number of",
+                   "cross-validation runs can be combined."))
+    }
+
+    x.values <- list()
+    x.name <- p.obj.1@y.name
+    y.values <- list()
+    y.name <- p.obj.2@y.name
+    alpha.values <- list()
+    alpha.name <- p.obj.1@x.name
+
+    for (i in 1:length( p.obj.1@x.values )) {
+        x.values.1 <- p.obj.1@x.values[[i]]
+        y.values.1 <- p.obj.1@y.values[[i]]
+        x.values.2 <- p.obj.2@x.values[[i]]
+        y.values.2 <- p.obj.2@y.values[[i]]
+
+        ## cutoffs of combined object = merged cutoffs of simple objects
+        cutoffs <- sort( unique( c(x.values.1, x.values.2)), decreasing=TRUE )
+
+        ## calculate y.values at cutoffs using step function
+        y.values.int.1 <- approxfun(x.values.1, y.values.1,
+                                    method="constant",f=1,rule=2)(cutoffs)
+        y.values.int.2 <- approxfun(x.values.2, y.values.2,
+                                    method="constant",f=1,rule=2)(cutoffs)
+
+        ## 'approxfun' ignores NA and NaN
+        objs <- list( y.values.int.1, y.values.int.2)
+        objs.x <- list( x.values.1, x.values.2 )
+        na.cutoffs.1.bool <- is.na( y.values.1) & !is.nan( y.values.1 )
+        nan.cutoffs.1.bool <- is.nan( y.values.1)
+        na.cutoffs.2.bool <- is.na( y.values.2) & !is.nan( y.values.2 )
+        nan.cutoffs.2.bool <- is.nan( y.values.2)
+        bools <- list(na.cutoffs.1.bool, nan.cutoffs.1.bool,
+                      na.cutoffs.2.bool, nan.cutoffs.2.bool)
+        values <- c(NA,NaN,NA,NaN)
+        
+        for (j in 1:4) {
+            for (k in which(bools[[j]])) {
+                interval.max <- objs.x[[ ceiling(j/2) ]][k]
+                interval.min <- -Inf
+                if (k < length(objs.x[[ ceiling(j/2) ]])) {
+                    interval.min <- objs.x[[ ceiling(j/2) ]][k+1]
+                }
+                objs[[ ceiling(j/2) ]][cutoffs <= interval.max &
+                                       cutoffs > interval.min ] <- values[j]
+            }
+        }
+
+        alpha.values <- c(alpha.values, list(cutoffs))
+        x.values <- c(x.values, list(objs[[1]]))
+        y.values <- c(y.values, list(objs[[2]]))
+    }
+    
+    return( new("performance",
+                x.name=x.name, y.name=y.name,
+                alpha.name=alpha.name, x.values=x.values,
+                y.values=y.values, alpha.values=alpha.values))
+}
+
+.define.environments <- function() {
+    ## There are five environments: long.unit.names, function.names,
+    ## obligatory.x.axis, optional.arguments, default.values
+    
+    ## Define long names corresponding to the measure abbreviations.
+    long.unit.names <- new.env()
+    assign("none","None", envir=long.unit.names)
+    assign("cutoff", "Cutoff", envir=long.unit.names)
+    assign("acc", "Accuracy", envir=long.unit.names)
+    assign("err", "Error Rate", envir=long.unit.names)
+    assign("fpr", "False positive rate", envir=long.unit.names)
+    assign("tpr", "True positive rate", envir=long.unit.names)
+    assign("rec", "Recall", envir=long.unit.names)
+    assign("sens", "Sensitivity", envir=long.unit.names)
+    assign("fnr", "False negative rate", envir=long.unit.names)
+    assign("tnr", "True negative rate", envir=long.unit.names)
+    assign("spec", "Specificity", envir=long.unit.names)
+    assign("ppv", "Positive predictive value", envir=long.unit.names)
+    assign("prec", "Precision", envir=long.unit.names)
+    assign("npv", "Negative predictive value", envir=long.unit.names)
+    assign("fall", "Fallout", envir=long.unit.names)
+    assign("miss", "Miss", envir=long.unit.names)
+    assign("pcfall", "Prediction-conditioned fallout", envir=long.unit.names)
+    assign("pcmiss", "Prediction-conditioned miss", envir=long.unit.names)
+    assign("rpp", "Rate of positive predictions", envir=long.unit.names)
+    assign("rnp", "Rate of negative predictions", envir=long.unit.names)
+    assign("auc","Area under the ROC curve", envir=long.unit.names)
+    assign("cal", "Calibration error", envir=long.unit.names)
+    assign("mwp", "Median window position", envir=long.unit.names)
+    assign("prbe","Precision/recall break-even point", envir=long.unit.names)
+    assign("rch", "ROC convex hull", envir=long.unit.names)
+    assign("mxe", "Mean cross-entropy", envir=long.unit.names)
+    assign("rmse","Root-mean-square error", envir=long.unit.names)
+    assign("phi", "Phi correlation coefficient", envir=long.unit.names)
+    assign("mat","Matthews correlation coefficient", envir=long.unit.names)
+    assign("mi", "Mutual information", envir=long.unit.names)
+    assign("chisq", "Chi-square test statistic", envir=long.unit.names)
+    assign("odds","Odds ratio", envir=long.unit.names)
+    assign("lift", "Lift value", envir=long.unit.names)
+    assign("f","Precision-Recall F measure", envir=long.unit.names)
+    assign("sar", "SAR", envir=long.unit.names)
+    assign("ecost", "Expected cost", envir=long.unit.names)
+    assign("cost", "Explicit cost", envir=long.unit.names)
+
+    ## Define function names corresponding to the measure abbreviations.
+    function.names <- new.env()
+    assign("acc", ".performance.accuracy", envir=function.names)
+    assign("err", ".performance.error.rate", envir=function.names)
+    assign("fpr", ".performance.false.positive.rate", envir=function.names)
+    assign("tpr", ".performance.true.positive.rate", envir=function.names)
+    assign("rec", ".performance.true.positive.rate", envir=function.names)
+    assign("sens", ".performance.true.positive.rate", envir=function.names)
+    assign("fnr", ".performance.false.negative.rate", envir=function.names)
+    assign("tnr", ".performance.true.negative.rate", envir=function.names)
+    assign("spec", ".performance.true.negative.rate", envir=function.names)
+    assign("ppv", ".performance.positive.predictive.value",
+           envir=function.names)
+    assign("prec", ".performance.positive.predictive.value",
+           envir=function.names)
+    assign("npv", ".performance.negative.predictive.value",
+           envir=function.names)
+    assign("fall", ".performance.false.positive.rate", envir=function.names)
+    assign("miss", ".performance.false.negative.rate", envir=function.names)
+    assign("pcfall", ".performance.prediction.conditioned.fallout",
+           envir=function.names)
+    assign("pcmiss", ".performance.prediction.conditioned.miss",
+           envir=function.names)
+    assign("rpp", ".performance.rate.of.positive.predictions",
+           envir=function.names)
+    assign("rnp", ".performance.rate.of.negative.predictions",
+           envir=function.names)
+    assign("auc", ".performance.auc", envir=function.names)
+    assign("cal", ".performance.calibration.error", envir=function.names)
+    assign("prbe", ".performance.precision.recall.break.even.point",
+           envir=function.names)
+    assign("rch", ".performance.rocconvexhull", envir=function.names)
+    assign("mxe", ".performance.mean.cross.entropy", envir=function.names)
+    assign("rmse", ".performance.root.mean.squared.error",
+           envir=function.names)
+    assign("phi", ".performance.phi", envir=function.names)
+    assign("mat", ".performance.phi", envir=function.names)
+    assign("mi", ".performance.mutual.information", envir=function.names)
+    assign("chisq", ".performance.chisq", envir=function.names)
+    assign("odds", ".performance.odds.ratio", envir=function.names)
+    assign("lift", ".performance.lift", envir=function.names)
+    assign("f", ".performance.f", envir=function.names)
+    assign("sar", ".performance.sar", envir=function.names)
+    assign("ecost", ".performance.expected.cost", envir=function.names)
+    assign("cost", ".performance.cost", envir=function.names)
+
+    ## If a measure comes along with an obligatory x axis (including "none"),
+    ## list it here.
+    obligatory.x.axis <- new.env()
+    assign("mxe", "none", envir=obligatory.x.axis)
+    assign("rmse", "none", envir=obligatory.x.axis)
+    assign("prbe", "none", envir=obligatory.x.axis)
+    assign("auc", "none", envir=obligatory.x.axis)
+    assign("rch","none", envir=obligatory.x.axis)
+    ## ecost requires probability cost function as x axis, which is handled
+    ## implicitly, not as an explicit performance measure.
+    assign("ecost","none", envir=obligatory.x.axis)  
+    
+    ## If a measure has optional arguments, list the names of the
+    ## arguments here.
+    optional.arguments <- new.env()
+    assign("cal", "window.size", envir=optional.arguments)
+    assign("f", "alpha", envir=optional.arguments)
+    assign("cost", c("cost.fp", "cost.fn"), envir=optional.arguments)
+    assign("auc", "fpr.stop", envir=optional.arguments)
+        
+    ## If a measure has additional arguments, list the default values
+    ## for them here. Naming convention: e.g. "cal" has an optional
+    ## argument "window.size" the key to use here is "cal:window.size"
+    ## (colon as separator)
+    default.values <- new.env()
+    assign("cal:window.size", 100, envir=default.values)
+    assign("f:alpha", 0.5, envir=default.values)
+    assign("cost:cost.fp", 1, envir=default.values)
+    assign("cost:cost.fn", 1, envir=default.values)
+    assign("auc:fpr.stop", 1, envir=default.values) 
+    
+    list(long.unit.names=long.unit.names, function.names=function.names,
+         obligatory.x.axis=obligatory.x.axis,
+         optional.arguments=optional.arguments,
+         default.values=default.values)
+}
+
+#******************************************************************
+## ------------------------------------------------------------------------
+## classical machine learning contingency table measures
+## ------------------------------------------------------------------------
+
+.performance.accuracy <-
+  function(predictions, labels, cutoffs, fp, tp, fn, tn,
+           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+    
+      list( cutoffs, (tn+tp) / length(predictions) )
+  }
+
+.performance.error.rate <-
+  function(predictions, labels, cutoffs, fp, tp, fn, tn,
+           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+
+      list( cutoffs, (fn+fp) / length(predictions) )
+  }
+
+.performance.false.positive.rate <-
+  function(predictions, labels, cutoffs, fp, tp, fn, tn,
+           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+    
+      list( cutoffs, fp / n.neg )
+  }
+
+.performance.true.positive.rate <-
+  function(predictions, labels, cutoffs, fp, tp, fn, tn,
+           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+    
+      list( cutoffs, tp / n.pos )
+  }
+
+.performance.false.negative.rate <-
+  function(predictions, labels, cutoffs, fp, tp, fn, tn,
+           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+    
+      list( cutoffs, fn / n.pos )
+  }
+
+.performance.true.negative.rate <-
+  function(predictions, labels, cutoffs, fp, tp, fn, tn,
+           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+    
+      list( cutoffs, tn / n.neg )
+  }
+
+.performance.positive.predictive.value <-
+  function(predictions, labels, cutoffs, fp, tp, fn, tn,
+           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+    
+      ppv <- tp / (fp + tp)
+      list( cutoffs, ppv )
+  }
+
+.performance.negative.predictive.value <-
+  function(predictions, labels, cutoffs, fp, tp, fn, tn,
+           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+    
+      npv <- tn / (tn + fn)
+      list( cutoffs, npv )
+  }
+
+.performance.prediction.conditioned.fallout <-
+  function(predictions, labels, cutoffs, fp, tp, fn, tn,
+           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+      ppv <- .performance.positive.predictive.value(predictions, labels,
+                                                    cutoffs, fp, tp, fn, tn,
+                                                    n.pos, n.neg, n.pos.pred,
+                                                    n.neg.pred)[[2]]
+      list( cutoffs, 1 - ppv )
+  }
+
+.performance.prediction.conditioned.miss <-
+  function(predictions, labels, cutoffs, fp, tp, fn, tn,
+           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+      npv <- .performance.negative.predictive.value(predictions, labels,
+                                                    cutoffs, fp, tp, fn, tn,
+                                                    n.pos, n.neg, n.pos.pred,
+                                                    n.neg.pred)[[2]]
+      list( cutoffs, 1 - npv )
+  }
+
+## ------------------------------------------------------------------------
+## ...not actually performance measures, but very useful as a second axis
+## against which to plot a "real" performance measure
+## (popular example: lift charts)
+## ------------------------------------------------------------------------
+
+.performance.rate.of.positive.predictions <-
+  function(predictions, labels, cutoffs, fp, tp, fn, tn,
+           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+
+      list( cutoffs, n.pos.pred / (n.pos + n.neg) )
+  }
+
+.performance.rate.of.negative.predictions <-
+  function(predictions, labels, cutoffs, fp, tp, fn, tn,
+           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+
+      list( cutoffs, n.neg.pred / (n.pos + n.neg) )
+  }
+
+
+## ------------------------------------------------------------------------
+## Classical statistical contingency table measures
+## ------------------------------------------------------------------------
+
+.performance.phi <-
+  function(predictions, labels, cutoffs, fp, tp, fn, tn,
+           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+
+      list(cutoffs,
+           (tn*tp - fn*fp) / sqrt(n.pos * n.neg * n.pos.pred * n.neg.pred) )
+  }
+
+.performance.mutual.information <-
+  function(predictions, labels, cutoffs, fp, tp, fn, tn,
+           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+
+      n.samples <- n.pos + n.neg
+      mi <- c()
+      for (k in 1:length(cutoffs)) {
+          kij <- rbind( c(tn[k],fn[k]), c(fp[k],tp[k]) )
+
+          ki.j. <- rbind(c(n.neg * n.neg.pred[k], n.neg.pred[k] * n.pos),
+                         c(n.neg * n.pos.pred[k], n.pos * n.pos.pred[k]))
+
+          log.matrix <- log2( kij / ki.j.)
+          log.matrix[kij/ki.j.==0] <- 0
+          
+          mi <- c(mi,  log2(n.samples) + sum( kij * log.matrix) / n.samples  )
+      }
+
+      list( cutoffs, mi )
+  }
+
+
+.performance.chisq <-
+  function(predictions, labels, cutoffs, fp, tp, fn, tn,
+           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+
+      chisq <- c()
+      for (i in 1:length(cutoffs)) {
+          A <- rbind( c( tn[i], fn[i]), c(fp[i], tp[i]) )
+          chisq <- c(chisq, chisq.test(A, correct=FALSE)$statistic )
+      }
+      list( cutoffs, chisq )
+  }
+
+.performance.odds.ratio <- 
+  function(predictions, labels, cutoffs, fp, tp, fn, tn,
+           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+      
+
+    list( cutoffs, tp * tn / (fn * fp) )
+    
+}
+
+## ------------------------------------------------------------------------
+## Other measures based on contingency tables
+## ------------------------------------------------------------------------
+
+.performance.lift <-
+  function(predictions, labels, cutoffs, fp, tp, fn, tn,
+           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+      
+      n.samples <- n.pos + n.neg
+      list( cutoffs, (tp / n.pos) / (n.pos.pred / n.samples) )
+  }
+
+.performance.f <-
+  function(predictions, labels, cutoffs, fp, tp, fn, tn,
+           n.pos, n.neg, n.pos.pred, n.neg.pred, alpha) {
+
+      prec <- .performance.positive.predictive.value(predictions, labels,
+                                                     cutoffs, fp, tp, fn, tn,
+                                                     n.pos, n.neg, n.pos.pred,
+                                                     n.neg.pred)[[2]]
+      list( cutoffs,  1/ ( alpha*(1/prec) + (1-alpha)*(1/(tp/n.pos))  ) )
+  }
+
+.performance.rocconvexhull <-
+  function(predictions, labels, cutoffs, fp, tp, fn, tn,
+           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+      
+      x <- fp / n.neg
+      y <- tp / n.pos
+
+      finite.bool <- is.finite(x) & is.finite(y)
+      x <- x[ finite.bool ]
+      y <- y[ finite.bool ]
+      if (length(x) < 2) {
+          stop("Not enough distinct predictions to compute ROC convex hull.")
+      }
+
+      ## keep only points on the convex hull
+      ind <- chull(x, y)
+      x.ch <- x[ind]
+      y.ch <- y[ind]
+
+      ## keep only convex hull points above the diagonal, except (0,0)
+      ## and (1,1)
+      ind.upper.triangle <- x.ch < y.ch
+      x.ch <- c(0, x.ch[ind.upper.triangle], 1)
+      y.ch <- c(0, y.ch[ind.upper.triangle], 1)
+
+      ## sort remaining points by ascending x value
+      ind <- order(x.ch)
+      x.ch <- x.ch[ind]
+      y.ch <- y.ch[ind]
+
+      list( x.ch, y.ch )
+  }
+
+## ----------------------------------------------------------------------------
+## Cutoff-independent measures
+## ----------------------------------------------------------------------------
+
+.performance.auc <-
+  function(predictions, labels, cutoffs, fp, tp, fn, tn,
+           n.pos, n.neg, n.pos.pred, n.neg.pred, fpr.stop) {
+      
+      x <- fp / n.neg
+      y <- tp / n.pos
+
+      finite.bool <- is.finite(x) & is.finite(y)
+      x <- x[ finite.bool ]
+      y <- y[ finite.bool ]
+      if (length(x) < 2) {
+          stop(paste("Not enough distinct predictions to compute area",
+                     "under the ROC curve."))
+      }
+
+      if (fpr.stop < 1) {
+        ind <- max(which( x <= fpr.stop ))
+        tpr.stop <- approxfun( x[ind:(ind+1)], y[ind:(ind+1)] )(fpr.stop)
+        x <- c(x[1:ind], fpr.stop)
+        y <- c(y[1:ind], tpr.stop)
+      }
+      
+      ans <- list()
+      auc <- 0
+      for (i in 2:length(x)) {
+          auc <- auc + 0.5 * (x[i] - x[i-1]) * (y[i] + y[i-1])
+      }
+      ans <- list( c(), auc)
+      names(ans) <- c("x.values","y.values")
+      return(ans)
+  }
+
+.performance.precision.recall.break.even.point <-
+  function(predictions, labels, cutoffs, fp, tp, fn, tn,
+           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+
+      pred <- prediction( predictions, labels)
+      perf <- performance( pred, measure="prec", x.measure="rec")
+      x <- rev(perf@x.values[[1]])
+      y <- rev(perf@y.values[[1]])
+      alpha <- rev(perf@alpha.values[[1]])
+
+      finite.bool <- is.finite(alpha) & is.finite(x) & is.finite(y)
+      x <- x[ finite.bool ]
+      y <- y[ finite.bool ]
+      alpha <- alpha[ finite.bool ]
+
+      if (length(x) < 2) {
+          stop(paste("Not enough distinct predictions to compute",
+                     "precision/recall intersections."))
+      }
+      intersection.cutoff <- c()
+      intersection.pr <- c()
+      
+      ## find all intersection points by looking at all intervals (i,i+1):
+      ## if the difference function between x and y has different signs at the
+      ## interval boundaries, then an intersection point is in the interval;
+      ## compute as the root of the difference function
+      if ( (x[1]-y[1]) == 0) {
+          intersection.cutoff <- c( alpha[1] )
+          intersection.pr <- c( x[1] )
+      }
+
+      for (i in (1:(length(alpha)-1))) {
+          if ((x[i+1]-y[i+1]) == 0) {
+              intersection.cutoff <- c( intersection.cutoff, alpha[i+1] )
+              intersection.pr <- c( intersection.pr, x[i+1] )
+          } else if ((x[i]-y[i])*(x[i+1]-y[i+1]) < 0 ) {
+              ans <- uniroot(approxfun(c(alpha[i], alpha[i+1] ),
+                                       c(x[i]-y[i], x[i+1]-y[i+1])),
+                             c(alpha[i],alpha[i+1]))
+              intersection.cutoff <- c(intersection.cutoff, ans$root)
+              intersection.pr <- c(intersection.pr, ans$f.root)
+          }
+      }
+
+      list( rev(intersection.cutoff), rev(intersection.pr) )
+  }
+
+
+.performance.calibration.error <-
+  function(predictions, labels, cutoffs, fp, tp, fn, tn,
+           n.pos, n.neg, n.pos.pred, n.neg.pred, window.size) {
+
+      if (window.size > length(predictions)) {
+          stop("Window size exceeds number of predictions.")
+      }
+      if (min(predictions)<0 || max(predictions)>1) {
+          stop("Calibration error needs predictions between 0 and 1")
+      }
+      
+      pos.label <- levels(labels)[2]
+      neg.label <- levels(labels)[1]
+
+      ordering <- rev(order( predictions ))
+      predictions <- predictions[ ordering ]
+      labels <- labels[ ordering ]
+
+      median.cutoffs <- c()
+      calibration.errors <- c()
+
+      for (left.index in 1 : (length(predictions) - window.size+1) ) {
+          right.index <- left.index + window.size - 1
+          pos.fraction <-
+            sum(labels[left.index : right.index] == pos.label) / window.size
+          mean.prediction <- mean( predictions[ left.index : right.index ] )
+
+          calibration.errors <- c(calibration.errors,
+                                  abs(pos.fraction - mean.prediction))
+          median.cutoffs <- c(median.cutoffs,
+                              median(predictions[left.index:right.index]))
+      }
+      list( median.cutoffs, calibration.errors )
+  }
+
+
+.performance.mean.cross.entropy <-
+  function(predictions, labels, cutoffs, fp, tp, fn, tn,
+           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+
+      if (! all(levels(labels)==c(0,1)) ||
+          any(predictions<0) || any(predictions>1) ) {
+          stop(paste("Class labels need to be 0 and 1 and predictions between",
+                     "0 and 1 for mean cross entropy."))
+      }
+      
+      pos.label <- levels(labels)[2]
+      neg.label <- levels(labels)[1]
+    
+      list( c(), - 1/length(predictions) *
+           (sum( log( predictions[which(labels==pos.label)] ))  +
+            sum( log( 1 - predictions[which(labels==neg.label)] ))) )
+  }
+
+
+.performance.root.mean.squared.error <-
+  function(predictions, labels, cutoffs, fp, tp, fn, tn,
+           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+      ## convert labels from factor to numeric values
+      labels <- as.numeric(levels(labels))[labels]
+      if (any(is.na(labels))) {
+          stop("For rmse predictions have to be numeric.")
+      }
+      list( c(),  sqrt( 1/length(predictions) *
+                      sum( (predictions - labels)^2 ))  )
+  }
+
+## ----------------------------------------------------------------------------
+## Derived measures:
+## ----------------------------------------------------------------------------
+
+.performance.sar <- function( predictions, labels, cutoffs, fp, tp, fn, tn,
+           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+
+    pred <- prediction( predictions, labels)
+    perf.acc <- performance( pred, measure="acc")
+    perf.rmse <- performance( pred, measure="rmse")
+    perf.auc <- performance( pred, measure="auc")
+
+    list(cutoffs,
+         1/3 * (perf.acc@y.values[[1]] +
+                (1 - perf.rmse@y.values[[1]]) +
+                perf.auc@y.values[[1]]))
+}
+
+## ----------------------------------------------------------------------------
+## Measures taking into account actual cost considerations
+## ----------------------------------------------------------------------------
+
+.performance.expected.cost <-
+  function(predictions, labels, cutoffs, fp, tp, fn, tn,
+           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+      
+      ## kick out suboptimal values (i.e. fpr/tpr pair for which another one
+      ## with same fpr and higher tpr exists, 
+      ## or one for which one with same tpr but lower fpr exists
+
+      if (n.neg==0 || n.pos==0) {
+          stop(paste("At least one positive and one negative sample are",
+                     "needed to compute a cost curve."))
+      }
+      fpr <- fp / n.neg
+      tpr <- tp / n.pos
+
+      ## sort by fpr (ascending), in case of ties by descending tpr
+      ind <- order(fpr,-tpr)
+      
+      fpr <- fpr[ind]
+      tpr <- tpr[ind]
+      ## for tied fprs, only the one with the highest tpr is kept
+      ind <- !duplicated(fpr)
+      fpr <- fpr[ind]
+      tpr <- tpr[ind]
+
+      ## for tied tprs, only keep the one with the lowest fpr
+      ind <- order(-tpr,fpr)
+      fpr <- fpr[ind]
+      tpr <- tpr[ind]
+      ind <- !duplicated(tpr)
+      fpr <- fpr[ind]
+      tpr <- tpr[ind]
+
+      if (!any(0==fpr & 0==tpr)) {
+          fpr <- c(0,fpr)
+          tpr <- c(0,tpr)
+      }
+      if (!any(1==fpr & 1==tpr)) {
+          fpr <- c(fpr,1)
+          tpr <- c(tpr,1)
+      }
+      
+      ## compute all functions
+      f <- list()
+      for (i in 1:length(fpr)) {
+          f <- c(f, .construct.linefunct( 0, fpr[i], 1, 1-tpr[i] ))
+      }
+      
+      ## compute all intersection points
+      x.values <- c()
+      y.values <- c()
+      for (i in 1:(length(fpr)-1)) {
+          for (j in (i+1):length(fpr)) {
+              ans <- .intersection.point( f[[i]], f[[j]] )
+              if (all(is.finite(ans))) {
+                  y.values.at.current.x <- c()
+                  for (k in 1:length(f)) {
+                      y.values.at.current.x <- c(y.values.at.current.x,
+                                                 f[[k]](ans[1]))
+                  }
+                  if (abs(ans[2] - min(y.values.at.current.x )) <
+                      sqrt(.Machine$double.eps)) {
+                      
+                      x.values <- c(x.values, ans[1])
+                      y.values <- c(y.values, ans[2])
+                  }
+              }
+          }
+      }
+
+      if (!any(0==x.values & 0==y.values)) {
+          x.values <- c(0,x.values)
+          y.values <- c(0,y.values)
+      }
+      if (!any(1==x.values & 0==y.values)) {
+          x.values <- c(x.values,1)
+          y.values <- c(y.values,0)
+      }
+
+      ind <- order( x.values)
+      list( x.values[ind], y.values[ind] )
+  }
+
+
+.performance.cost <-
+  function(predictions, labels, cutoffs, fp, tp, fn, tn,
+           n.pos, n.neg, n.pos.pred, n.neg.pred, cost.fp, cost.fn) {
+      
+    n.samples <- n.pos + n.neg
+    cost <- ((n.pos / n.samples) * (fn / n.pos) * cost.fn +
+             (n.neg / n.samples) * (fp / n.neg) * cost.fp)
+    list( cutoffs, cost )
+}
+
+#******************************************************************
+## ----------------------------------------------------------------------------
+## plot method for objects of class 'performance'
+## ----------------------------------------------------------------------------
+
+.get.arglist <- function( fname, arglist ) {
+     if (fname=='plot')
+       return(.select.args(arglist,
+                           union(names(formals(plot.default)), names(par()))))
+     else if (fname=='plot.xy')
+       return(.select.args(arglist,
+                           union( names(formals(plot.xy)), names(par()))))
+     else return( .select.prefix( arglist, fname) )
+ }
+
+.downsample <- function( perf, downsampling ) {
+    for (i in 1:length(perf@alpha.values)) {
+        if (downsampling < 1 && downsampling > 0)
+          ind <- round(seq(1, length(perf@alpha.values[[i]]),
+                           length=(length(perf@alpha.values[[i]]) *
+                                   downsampling)))
+        else if (downsampling > 1)
+          ind <- round(seq(1, length(perf@alpha.values[[i]]),
+                           length=downsampling))
+        else ind <- 1:length(perf@alpha.values[[i]])
+        perf@alpha.values[[i]] <- perf@alpha.values[[i]][ind]
+        perf@x.values[[i]] <- perf@x.values[[i]][ind]
+        perf@y.values[[i]] <- perf@y.values[[i]][ind]
+    }
+    return(perf)
+}
+
+.plot.performance <-
+  function(perf, ..., avg="none",
+           spread.estimate="none", spread.scale=1, show.spread.at=c(),
+           colorize=FALSE, colorize.palette=rev(rainbow(256,start=0, end=4/6)),
+           colorkey=colorize, colorkey.relwidth=0.25, colorkey.pos="right",
+           print.cutoffs.at=c(),
+           cutoff.label.function=function(x) { round(x,2) },
+           downsampling=0, add=FALSE) {
+
+      arglist <- c(lapply( as.list(environment()), eval ), list(...) )
+
+      if (length(perf@y.values) != length(perf@x.values)) {
+          stop("Performance object cannot be plotted.")
+      }
+      if (is.null(perf@alpha.values) && (colorize==TRUE ||
+                                         length(print.cutoffs.at)>0)) {
+          stop(paste("Threshold coloring or labeling cannot be performed:",
+                     "performance object has no threshold information."))
+      }
+      if ((avg=="vertical" || avg=="horizontal") &&
+          (colorize==TRUE || length(print.cutoffs.at)>0)) {
+          stop(paste("Threshold coloring or labeling is only well-defined for",
+                     "'no' or 'threshold' averaging."))
+      }
+    
+      if (downsampling >0 ) perf <- .downsample( perf, downsampling)
+
+      ## for infinite cutoff, assign maximal finite cutoff + mean difference
+      ## between adjacent cutoff pairs
+      if (length(perf@alpha.values)!=0) perf@alpha.values <-
+        lapply(perf@alpha.values,
+               function(x) { isfin <- is.finite(x);
+                             x[is.infinite(x)] <-
+                               (max(x[isfin]) +
+                                mean(abs(x[isfin][-1] -
+                                         x[isfin][-length(x[isfin])])));
+                             x } )
+      ## remove samples with x or y not finite
+      for (i in 1:length(perf@x.values)) {
+          ind.bool <- (is.finite(perf@x.values[[i]]) &
+                       is.finite(perf@y.values[[i]]))
+          
+          if (length(perf@alpha.values)>0)
+            perf@alpha.values[[i]] <- perf@alpha.values[[i]][ind.bool]
+          
+          perf@x.values[[i]] <- perf@x.values[[i]][ind.bool]
+          perf@y.values[[i]] <- perf@y.values[[i]][ind.bool]
+      }
+      arglist <- .sarg( arglist, perf=perf)
+    
+      if (add==FALSE) do.call( ".performance.plot.canvas", arglist )
+
+      if (avg=="none") do.call(".performance.plot.no.avg", arglist)  
+      else if (avg=="vertical")
+        do.call(".performance.plot.vertical.avg", arglist)
+      else if (avg=="horizontal")
+        do.call(".performance.plot.horizontal.avg", arglist)
+      else if (avg=="threshold")
+        do.call(".performance.plot.threshold.avg", arglist)
+  }
+
+## ---------------------------------------------------------------------------
+## initializing plots and plotting a canvas
+## (can be skipped using 'plot( ..., add=TRUE)'
+## ---------------------------------------------------------------------------
+
+.performance.plot.canvas <- function(perf, avg, ...) {
+
+    arglist <- list(...)
+
+    axis.names <- list(x=perf@x.name, y=perf@y.name)
+    if (avg=="horizontal" || avg=="threshold")
+      axis.names$x <- paste("Average", tolower(axis.names$x))
+    if (avg=="vertical" || avg=="threshold")
+      axis.names$y <- paste("Average", tolower(axis.names$y))
+    arglist <- .farg(arglist, xlab=axis.names$x, ylab=axis.names$y)
+
+    arglist <-
+      .farg(arglist,
+            xlim=c(min(unlist(perf@x.values)), max(unlist(perf@x.values))),
+            ylim=c(min(unlist(perf@y.values)), max(unlist(perf@y.values))))
+    
+    do.call("plot", .sarg(.slice.run(.get.arglist('plot', arglist)),
+                          x=0.5, y=0.5, type='n', axes=FALSE))
+    do.call( "axis", .sarg(.slice.run(.get.arglist('xaxis', arglist)),
+                           side=1))
+    do.call( "axis", .sarg(.slice.run(.get.arglist('yaxis', arglist)),
+                           side=2))
+
+    if (.garg(arglist,'colorkey')==TRUE) {
+        colors <- rev( .garg(arglist,'colorize.palette') )
+        max.alpha <- max(unlist(perf@alpha.values))
+        min.alpha <- min(unlist(perf@alpha.values))
+        col.cutoffs <- rev(seq(min.alpha,max.alpha, length=length( colors )))
+
+        if ( .garg(arglist,'colorkey.pos')=="right") {
+            
+            ## axis drawing (ticks + labels)
+            ## The interval [min.alpha,max.alpha] needs to be mapped onto
+            ## the interval [min.y,max.y], rather than onto the interval
+            ## [ylim[1],ylim[2]] ! In the latter case, NAs could occur in
+            ## approxfun below, because axTicks can be out of the ylim-range
+            ## ('yxaxs': 4%region)
+            max.y <- max(axTicks(4))
+            min.y <- min(axTicks(4))
+            alpha.ticks <- .garg( arglist, c("coloraxis.at"))
+            if (length(alpha.ticks)==0)
+              alpha.ticks <- approxfun(c(min.y, max.y),
+                                       c(min.alpha, max.alpha)) ( axTicks(4))
+            alpha2y <- approxfun(c(min(alpha.ticks), max(alpha.ticks)),
+                                 c(min.y,max.y))
+            arglist <-
+              .sarg(arglist,
+                    coloraxis.labels=.garg(arglist,
+                      'cutoff.label.function')(alpha.ticks),
+                    coloraxis.at=alpha2y(alpha.ticks))
+            
+            do.call("axis",
+                    .sarg(.slice.run(.get.arglist('coloraxis', arglist)),
+                          side=4))
+
+            ## draw colorkey
+            ## each entry in display.bool corresponds to one rectangle of
+            ## the colorkey.
+            ## Only rectangles within the alpha.ticks range are plotted.
+            ## y.lower, y.upper, and colors, are the attributes of the visible
+            ## rectangles (those for which display.bool=TRUE)
+            display.bool <- (col.cutoffs >= min(alpha.ticks) &
+                             col.cutoffs < max(alpha.ticks))
+            y.lower <- alpha2y( col.cutoffs )[display.bool]
+            colors <- colors[display.bool]
+            if (length(y.lower>=2)) {
+                y.width <- y.lower[2] - y.lower[1]
+                y.upper <- y.lower + y.width
+                x.left <- .garg(arglist,'xlim')[2] +
+                  ((.garg(arglist,'xlim')[2] - .garg(arglist,'xlim')[1]) *
+                   (1-.garg(arglist,'colorkey.relwidth'))*0.04)
+                x.right <- .garg(arglist,'xlim')[2] +
+                  (.garg(arglist,'xlim')[2] -.garg(arglist,'xlim')[1]) * 0.04
+                rect(x.left, y.lower, x.right, y.upper,
+                     col=colors, border=colors,xpd=NA)
+            }
+        } else if (.garg(arglist, 'colorkey.pos') == "top") {
+            ## axis drawing (ticks + labels)
+            max.x <- max(axTicks(3))
+            min.x <- min(axTicks(3))
+            alpha.ticks <- .garg( arglist, c("coloraxis.at"))
+            if (length(alpha.ticks)==0) {
+                alpha.ticks <- approxfun(c(min.x, max.x),
+                                         c(min.alpha, max.alpha))(axTicks(3))
+            }
+            alpha2x <- approxfun(c( min(alpha.ticks), max(alpha.ticks)),
+                                 c( min.x, max.x))
+            arglist <- .sarg(arglist,
+                             coloraxis.labels=.garg(arglist,
+                               'cutoff.label.function')(alpha.ticks),
+                             coloraxis.at= alpha2x(alpha.ticks)) 
+            do.call("axis",
+                    .sarg(.slice.run( .get.arglist('coloraxis', arglist)),
+                          side=3))
+
+            ## draw colorkey
+            display.bool <- (col.cutoffs >= min(alpha.ticks) &
+                             col.cutoffs < max(alpha.ticks))
+            x.left <- alpha2x( col.cutoffs )[display.bool]
+            colors <- colors[display.bool]
+            if (length(x.left)>=2) {
+                x.width <- x.left[2] - x.left[1]
+                x.right <- x.left + x.width
+                y.lower <- .garg(arglist,'ylim')[2] +
+                  (.garg(arglist,'ylim')[2] - .garg(arglist,'ylim')[1]) *
+                    (1-.garg(arglist,'colorkey.relwidth'))*0.04
+                y.upper <- .garg(arglist,'ylim')[2] +
+                  (.garg(arglist,'ylim')[2] - .garg(arglist,'ylim')[1]) * 0.04
+                rect(x.left, y.lower, x.right, y.upper,
+                     col=colors, border=colors, xpd=NA)
+            }
+        }
+    }
+    
+    do.call( "box", .slice.run( .get.arglist( 'box', arglist)))
+}
+
+## ----------------------------------------------------------------------------
+## plotting performance objects when no curve averaging is wanted
+## ----------------------------------------------------------------------------
+
+.performance.plot.no.avg <- function( perf, ... ) {
+
+    arglist <- list(...)
+    arglist <- .farg(arglist, type= 'l')
+    
+    if (.garg(arglist, 'colorize') == TRUE) {
+        colors <- rev( .garg( arglist, 'colorize.palette') )
+        max.alpha <- max(unlist(perf@alpha.values))
+        min.alpha <- min(unlist(perf@alpha.values))
+        col.cutoffs <- rev(seq(min.alpha,max.alpha, length=length(colors)+1))
+        col.cutoffs <- col.cutoffs[2:length(col.cutoffs)]
+    }
+    
+    for (i in 1:length(perf@x.values)) {
+        if (.garg(arglist, 'colorize') == FALSE) {
+            do.call("plot.xy",
+                    .sarg(.slice.run(.get.arglist('plot.xy', arglist), i),
+                          xy=(xy.coords(perf@x.values[[i]],
+                                        perf@y.values[[i]]))))
+        } else {
+            for (j in 1:(length(perf@x.values[[i]])-1)) {
+                segment.coloring <-
+                  colors[min(which(col.cutoffs <= perf@alpha.values[[i]][j]))]
+                do.call("plot.xy",
+                        .sarg(.slice.run(.get.arglist('plot.xy', arglist), i),
+                              xy=(xy.coords(perf@x.values[[i]][j:(j+1)],
+                                            perf@y.values[[i]][j:(j+1)])),
+                              col= segment.coloring))
+            }
+        }
+
+        print.cutoffs.at <- .garg(arglist, 'print.cutoffs.at',i)
+        if (! is.null(print.cutoffs.at)) {
+            text.x <- approxfun(perf@alpha.values[[i]], perf@x.values[[i]],
+                                rule=2, ties=mean)(print.cutoffs.at)
+            text.y <- approxfun(perf@alpha.values[[i]], perf@y.values[[i]],
+                                rule=2, ties=mean)(print.cutoffs.at)
+            do.call("points",
+                    .sarg(.slice.run(.get.arglist('points', arglist),i),
+                          x= text.x,
+                          y= text.y))
+            do.call("text",
+                    .farg(.slice.run( .get.arglist('text', arglist),i),
+                          x= text.x,
+                          y= text.y,
+                          labels=(.garg(arglist,
+                                        'cutoff.label.function',
+                                        i)(print.cutoffs.at))))
+        }
+    }
+}
+
+## ----------------------------------------------------------------------------
+## plotting performance objects when vertical curve averaging is wanted
+## ----------------------------------------------------------------------------
+
+.performance.plot.vertical.avg <- function( perf, ...) {
+    arglist <- list(...)
+    arglist <- .farg(arglist,
+                     show.spread.at= (seq(min(unlist(perf@x.values)),
+                                          max(unlist(perf@x.values)),
+                                          length=11)))
+    perf.avg <- perf
+    x.values <- seq(min(unlist(perf@x.values)), max(unlist(perf@x.values)),
+                    length=max( sapply(perf@x.values, length)))
+    for (i in 1:length(perf@y.values)) {
+        perf.avg@y.values[[i]] <-
+          approxfun(perf@x.values[[i]], perf@y.values[[i]],
+                    ties=mean, rule=2)(x.values)
+    }
+    perf.avg@y.values <- list(rowMeans( data.frame( perf.avg@y.values )))
+    perf.avg@x.values <- list(x.values)
+    perf.avg@alpha.values <- list()
+
+    ## y.values at show.spread.at (midpoint of error bars )
+    show.spread.at.y.values <-
+      lapply(as.list(1:length(perf@x.values)),
+             function(i) {
+                 approxfun(perf@x.values[[i]], perf@y.values[[i]],
+                           rule=2,
+                           ties=mean)( .garg(arglist, 'show.spread.at'))
+             })
+
+    show.spread.at.y.values <- as.matrix(data.frame(show.spread.at.y.values ))
+    colnames(show.spread.at.y.values) <- c()
+    ## now, show.spread.at.y.values[i,] contains the curve y values at the
+    ## sampling x value .garg(arglist,'show.spread.at')[i]
+    
+    if (.garg(arglist, 'spread.estimate') == "stddev" ||
+        .garg(arglist, 'spread.estimate') == "stderror") {
+        bar.width <- apply(show.spread.at.y.values, 1, sd)
+        if (.garg(arglist, 'spread.estimate') == "stderror") {
+            bar.width <- bar.width / sqrt( ncol(show.spread.at.y.values) )
+        }
+        bar.width <- .garg(arglist, 'spread.scale') * bar.width
+
+        suppressWarnings(do.call("plotCI",
+                                 .farg(.sarg(.get.arglist( 'plotCI', arglist),
+                                             x=.garg(arglist,
+                                               'show.spread.at'),
+                                             y=rowMeans(
+                                               show.spread.at.y.values),
+                                             uiw= bar.width,
+                                             liw= bar.width,
+                                             err= 'y',
+                                             add= TRUE),
+                                       gap= 0,
+                                       type= 'n')))
+    }
+    
+    if (.garg(arglist, 'spread.estimate') == "boxplot") {
+        do.call("boxplot",
+                .farg(.sarg(.get.arglist( 'boxplot', arglist),
+                            x= data.frame(t(show.spread.at.y.values)),
+                            at= .garg(arglist, 'show.spread.at'),
+                            add= TRUE,
+                            axes= FALSE),
+                      boxwex= (1/(2*(length(.garg(arglist,
+                                                  'show.spread.at')))))))
+        do.call("points",
+                .sarg(.get.arglist( 'points', arglist),
+                      x= .garg(arglist, 'show.spread.at'),
+                      y= rowMeans(show.spread.at.y.values)))
+    }
+    
+    do.call( ".plot.performance", .sarg(arglist,
+                                       perf= perf.avg,
+                                       avg= 'none',
+                                       add= TRUE))
+}
+
+## ----------------------------------------------------------------------------
+## plotting performance objects when horizontal curve averaging is wanted
+## ----------------------------------------------------------------------------
+
+.performance.plot.horizontal.avg <- function( perf, ...) {
+    arglist <- list(...)
+    arglist <- .farg(arglist,
+                     show.spread.at= seq(min(unlist(perf@y.values)),
+                       max(unlist(perf@y.values)),
+                       length=11))
+    perf.avg <- perf
+    y.values <- seq(min(unlist(perf@y.values)), max(unlist(perf@y.values)),
+                    length=max( sapply(perf@y.values, length)))
+    for (i in 1:length(perf@x.values)) {
+        perf.avg@x.values[[i]] <- approxfun(perf@y.values[[i]],
+                                            perf@x.values[[i]],
+                                            ties=mean, rule=2)(y.values)
+    }
+    perf.avg@x.values <- list(rowMeans( data.frame( perf.avg@x.values )))
+    perf.avg@y.values <- list(y.values)
+    perf.avg@alpha.values <- list()
+    
+    ## x.values at show.spread.at (midpoint of error bars )
+    show.spread.at.x.values <-
+      lapply(as.list(1:length(perf@y.values)),
+             function(i) {
+                 approxfun(perf@y.values[[i]],
+                           perf@x.values[[i]],
+                           rule=2, ties=mean)(.garg(arglist,'show.spread.at'))
+             } )
+    show.spread.at.x.values <- as.matrix(data.frame(show.spread.at.x.values))
+    colnames(show.spread.at.x.values) <- c()
+    ## now, show.spread.at.x.values[i,] contains the curve x values at the
+    ## sampling y value .garg(arglist,'show.spread.at')[i]
+    
+    if (.garg(arglist,'spread.estimate') == 'stddev' ||
+        .garg(arglist,'spread.estimate') == 'stderror') {
+        bar.width <- apply(show.spread.at.x.values, 1, sd)
+        if (.garg(arglist,'spread.estimate')== 'stderror') {
+            bar.width <- bar.width / sqrt( ncol(show.spread.at.x.values) )
+        }
+        bar.width <- .garg(arglist,'spread.scale') * bar.width
+
+        suppressWarnings(do.call("plotCI",
+                                 .farg(.sarg(.get.arglist( 'plotCI', arglist),
+                                             x= rowMeans(
+                                               show.spread.at.x.values),
+                                             y= .garg(arglist,
+                                               'show.spread.at'),
+                                             uiw= bar.width,
+                                             liw= bar.width,
+                                             err= 'x',
+                                             add= TRUE),
+                                       gap= 0,
+                                       type= 'n')))
+    }
+    
+    if (.garg(arglist,'spread.estimate') == "boxplot") {
+        do.call("boxplot",
+                .farg(.sarg(.get.arglist( 'boxplot', arglist),
+                            x= data.frame(t(show.spread.at.x.values)),
+                            at= .garg(arglist,'show.spread.at'),
+                            add= TRUE,
+                            axes= FALSE,
+                            horizontal= TRUE),
+                      boxwex= 1/(2*(length(.garg(arglist,'show.spread.at'))))))
+        do.call("points", .sarg(.get.arglist( 'points', arglist),
+                                x= rowMeans(show.spread.at.x.values),
+                                y= .garg(arglist,'show.spread.at')))
+    }
+    
+    do.call( ".plot.performance", .sarg(arglist,
+                                        perf= perf.avg,
+                                        avg= 'none',
+                                        add= TRUE))
+}
+
+## ----------------------------------------------------------------------------
+## plotting performance objects when threshold curve averaging is wanted
+## ----------------------------------------------------------------------------
+
+.performance.plot.threshold.avg <- function( perf, ...) {
+    arglist <- list(...)
+    arglist <- .farg(arglist,
+                     show.spread.at= seq(min(unlist(perf@x.values)),
+                       max(unlist(perf@x.values)),
+                       length=11))
+
+    perf.sampled <- perf
+    alpha.values <- rev(seq(min(unlist(perf@alpha.values)),
+                            max(unlist(perf@alpha.values)),
+                            length=max( sapply(perf@alpha.values, length))))
+    for (i in 1:length(perf.sampled@y.values)) {
+        perf.sampled@x.values[[i]] <-
+          approxfun(perf@alpha.values[[i]],perf@x.values[[i]],
+                    rule=2, ties=mean)(alpha.values)
+        perf.sampled@y.values[[i]] <-
+          approxfun(perf@alpha.values[[i]], perf@y.values[[i]],
+                    rule=2, ties=mean)(alpha.values)
+    }
+
+    ## compute average curve
+    perf.avg <- perf.sampled
+    perf.avg@x.values <- list( rowMeans( data.frame( perf.avg@x.values)))
+    perf.avg@y.values <- list(rowMeans( data.frame( perf.avg@y.values)))
+    perf.avg@alpha.values <- list( alpha.values )
+    
+    x.values.spread <-
+      lapply(as.list(1:length(perf@x.values)),
+             function(i) {
+                 approxfun(perf@alpha.values[[i]], perf@x.values[[i]],
+                           rule=2, ties=mean)(.garg(arglist,'show.spread.at'))
+             } )
+    x.values.spread <- as.matrix(data.frame( x.values.spread ))
+    y.values.spread <-
+      lapply(as.list(1:length(perf@y.values)),
+             function(i) {
+                 approxfun(perf@alpha.values[[i]], perf@y.values[[i]],
+                           rule=2, ties=mean)(.garg(arglist,'show.spread.at'))
+             } )
+    y.values.spread <- as.matrix(data.frame( y.values.spread ))
+
+    if (.garg(arglist,'spread.estimate')=="stddev" ||
+        .garg(arglist,'spread.estimate')=="stderror") {
+
+        x.bar.width <- apply(x.values.spread, 1, sd)
+        y.bar.width <- apply(y.values.spread, 1, sd)
+        if (.garg(arglist,'spread.estimate')=="stderror") {
+            x.bar.width <- x.bar.width / sqrt( ncol(x.values.spread) )
+            y.bar.width <- y.bar.width / sqrt( ncol(x.values.spread) )
+        }
+        x.bar.width <- .garg(arglist,'spread.scale') * x.bar.width
+        y.bar.width <- .garg(arglist,'spread.scale') * y.bar.width
+
+        suppressWarnings( do.call("plotCI",
+                                  .farg(.sarg(.get.arglist( 'plotCI', arglist),
+                                              x= rowMeans(x.values.spread),
+                                              y= rowMeans(y.values.spread),
+                                              uiw= x.bar.width,
+                                              liw= x.bar.width,
+                                              err= 'x',
+                                              add= TRUE),
+                                        gap= 0,
+                                        type= 'n')))
+        
+        suppressWarnings( do.call("plotCI",
+                                  .farg(.sarg(.get.arglist( 'plotCI', arglist),
+                                              x= rowMeans(x.values.spread), 
+                                              y= rowMeans(y.values.spread),
+                                              uiw= y.bar.width, 
+                                              liw= y.bar.width, 
+                                              err= 'y', 
+                                              add= TRUE),
+                                        gap= 0,
+                                        type= 'n')))
+    }
+
+    if (.garg(arglist,'spread.estimate')=="boxplot") {
+        do.call("boxplot",
+                .farg(.sarg(.get.arglist('boxplot', arglist),
+                            x= data.frame(t(x.values.spread)),
+                            at= rowMeans(y.values.spread),
+                            add= TRUE,
+                            axes= FALSE,
+                            horizontal= TRUE),
+                      boxwex= 1/(2*(length(.garg(arglist,'show.spread.at'))))))
+        do.call("boxplot",
+                .farg(.sarg(.get.arglist('boxplot', arglist),
+                            x= data.frame(t(y.values.spread)),
+                            at= rowMeans(x.values.spread),
+                            add= TRUE,
+                            axes= FALSE),
+                      boxwex= 1/(2*(length(.garg(arglist,'show.spread.at'))))))
+        do.call("points", .sarg(.get.arglist('points', arglist),
+                                x= rowMeans(x.values.spread),
+                                y= rowMeans(y.values.spread)))
+    }
+    
+    do.call( ".plot.performance", .sarg(arglist,
+                                       perf= perf.avg,
+                                       avg= 'none',
+                                       add= TRUE))
+}
+
+#******************************************************************
+prediction <- function(predictions, labels, label.ordering=NULL) {
+
+    ## bring 'predictions' and 'labels' into list format,
+    ## each list entry representing one x-validation run
+
+    ## convert predictions into canonical list format
+    if (is.data.frame(predictions)) {
+        names(predictions) <- c()
+        predictions <- as.list(predictions)
+    } else if (is.matrix(predictions)) {
+        predictions <- as.list(data.frame(predictions))
+        names(predictions) <- c()
+    } else if (is.vector(predictions) && !is.list(predictions)) {
+        predictions <- list(predictions)
+    } else if (!is.list(predictions)) {
+        stop("Format of predictions is invalid.")
+    } 
+    ## if predictions is a list -> keep unaltered
+  
+    ## convert labels into canonical list format
+    if (is.data.frame(labels)) {
+        names(labels) <- c()
+        labels <- as.list( labels)
+    } else if (is.matrix(labels)) {
+        labels <- as.list( data.frame( labels))
+        names(labels) <- c()
+    } else if ((is.vector(labels) ||
+                is.ordered(labels) ||
+                is.factor(labels)) &&
+               !is.list(labels)) {
+        labels <- list( labels)
+    } else if (!is.list(labels)) {
+        stop("Format of labels is invalid.")
+    }
+    ## if labels is a list -> keep unaltered
+
+    ## Length consistency checks
+    if (length(predictions) != length(labels))
+      stop(paste("Number of cross-validation runs must be equal",
+                 "for predictions and labels."))
+    if (! all(sapply(predictions, length) == sapply(labels, length)))
+      stop(paste("Number of predictions in each run must be equal",
+                 "to the number of labels for each run."))
+    
+    ## only keep prediction/label pairs that are finite numbers
+    for (i in 1:length(predictions)) {
+        finite.bool <- is.finite( predictions[[i]] )
+        predictions[[i]] <- predictions[[i]][ finite.bool ]
+        labels[[i]] <- labels[[i]][ finite.bool ]
+    }
+
+    ## abort if 'labels' format is inconsistent across
+    ## different cross-validation runs
+    label.format=""  ## one of 'normal','factor','ordered'
+    if (all(sapply( labels, is.factor)) &&
+        !any(sapply(labels, is.ordered))) {
+        label.format <- "factor"
+    } else if (all(sapply( labels, is.ordered))) {
+        label.format <- "ordered"
+    } else if (all(sapply( labels, is.character)) || 
+               all(sapply( labels, is.numeric)) ||
+               all(sapply( labels, is.logical))) {
+        label.format <- "normal"
+    } else {
+        stop(paste("Inconsistent label data type across different",
+                   "cross-validation runs."))
+    }
+    
+    ## abort if levels are not consistent across different
+    ## cross-validation runs
+    if (! all(sapply(labels, levels)==levels(labels[[1]])) ) {
+        stop(paste("Inconsistent factor levels across different",
+                   "cross-validation runs."))
+    }
+        
+    ## convert 'labels' into ordered factors, aborting if the number
+    ## of classes is not equal to 2.
+    levels <- c()
+    if ( label.format == "ordered" ) {
+        if (!is.null(label.ordering)) {
+            stop(paste("'labels' is already ordered. No additional",
+                       "'label.ordering' must be supplied."))
+        } else {
+            levels <- levels(labels[[1]])
+        }
+    } else {
+        if ( is.null( label.ordering )) {
+            if ( label.format == "factor" ) levels <- sort(levels(labels[[1]]))
+            else levels <- sort( unique( unlist( labels)))
+        } else {
+          ## if (!setequal( levels, label.ordering)) {
+          if (!setequal( unique(unlist(labels)), label.ordering )) {
+            stop("Label ordering does not match class labels.")
+          }
+          levels <- label.ordering
+        }
+        for (i in 1:length(labels)) {
+            if (is.factor(labels))
+              labels[[i]] <- ordered(as.character(labels[[i]]),
+                                     levels=levels)
+            else labels[[i]] <- ordered( labels[[i]], levels=levels)
+        }
+
+    }
+
+    if (length(levels) != 2) {
+        message <- paste("Number of classes is not equal to 2.\n",
+                         "ROCR currently supports only evaluation of ",
+                         "binary classification tasks.",sep="")
+        stop(message)
+    }
+
+    ## determine whether predictions are continuous or categorical
+    ## (in the latter case stop; scheduled for the next ROCR version)
+    if (!is.numeric( unlist( predictions ))) {
+        stop("Currently, only continuous predictions are supported by ROCR.")
+    }
+
+    ## compute cutoff/fp/tp data
+
+    cutoffs <- list()
+    fp <- list()
+    tp <- list()
+    fn <- list()
+    tn <- list()
+    n.pos <- list()
+    n.neg <- list()
+    n.pos.pred <- list()
+    n.neg.pred <- list()
+    for (i in 1:length(predictions)) {
+        n.pos <- c( n.pos, sum( labels[[i]] == levels[2] ))
+        n.neg <- c( n.neg, sum( labels[[i]] == levels[1] ))
+        ans <- .compute.unnormalized.roc.curve( predictions[[i]], labels[[i]] )
+        cutoffs <- c( cutoffs, list( ans$cutoffs ))
+        fp <- c( fp, list( ans$fp ))
+        tp <- c( tp, list( ans$tp ))
+        fn <- c( fn, list( n.pos[[i]] - tp[[i]] ))
+        tn <- c( tn, list( n.neg[[i]] - fp[[i]] ))
+        n.pos.pred <- c(n.pos.pred, list(tp[[i]] + fp[[i]]) )
+        n.neg.pred <- c(n.neg.pred, list(tn[[i]] + fn[[i]]) )
+    }
+
+
+    return( new("prediction", predictions=predictions,
+                labels=labels,
+                cutoffs=cutoffs,
+                fp=fp,
+                tp=tp,
+                fn=fn,
+                tn=tn,
+                n.pos=n.pos,
+                n.neg=n.neg,
+                n.pos.pred=n.pos.pred,
+                n.neg.pred=n.neg.pred))
+}
+
+
+## fast fp/tp computation based on cumulative summing
+.compute.unnormalized.roc.curve <- function( predictions, labels ) {
+    ## determine the labels that are used for the pos. resp. neg. class :
+    pos.label <- levels(labels)[2]
+    neg.label <- levels(labels)[1]
+
+    pred.order <- order(predictions, decreasing=TRUE)
+    predictions.sorted <- predictions[pred.order]
+    tp <- cumsum(labels[pred.order]==pos.label)
+    fp <- cumsum(labels[pred.order]==neg.label)
+
+    ## remove fp & tp for duplicated predictions
+    ## as duplicated keeps the first occurrence, but we want the last, two
+    ## rev are used.
+    ## Highest cutoff (Infinity) corresponds to tp=0, fp=0
+    dups <- rev(duplicated(rev(predictions.sorted)))
+    tp <- c(0, tp[!dups])
+    fp <- c(0, fp[!dups])
+    cutoffs <- c(Inf, predictions.sorted[!dups])
+    
+    return(list( cutoffs=cutoffs, fp=fp, tp=tp ))
+}
+
+#******************************************************************
+## ---------------------------------------------------------------------------
+## Dealing with argument lists, especially '...'
+## ---------------------------------------------------------------------------
+
+## return list of selected arguments, skipping those that
+## are not present in arglist
+.select.args <- function( arglist, args.to.select, complement=FALSE) {
+    match.bool <- names(arglist) %in% args.to.select
+    if (complement==TRUE) match.bool <- !match.bool
+    return( arglist[ match.bool] )
+}
+
+## return arguments in arglist which match prefix, with prefix removed
+## ASSUMPTION: prefix is separated from rest by a '.'; this is removed along
+## with the prefix
+.select.prefix <- function( arglist, prefixes, complement=FALSE ) {
+    match.expr <- paste(paste('(^',prefixes,'\\.)',sep=""),collapse='|')
+    match.bool <- (1:length(arglist)) %in% grep( match.expr, names(arglist) )
+    if (complement==TRUE) match.bool <- !match.bool
+    arglist <- arglist[ match.bool]
+    names(arglist) <- sub( match.expr, '', names(arglist))
+    
+    return( arglist )
+}
+
+.garg <- function( arglist, arg, i=1) {
+    if (is.list(arglist[[arg]])) arglist[[ arg ]][[i]]
+    else arglist[[ arg ]]
+}
+
+.sarg <- function( arglist, ...) {
+    ll <- list(...)
+    for (argname in names(ll) ) {
+        arglist[[ argname ]] <- ll[[ argname ]]
+    }
+    return(arglist)
+}
+
+.farg <- function( arglist, ...) {
+    ll <- list(...)
+    for (argname in names(ll) ) {
+        if (length(arglist[[argname]])==0)
+          arglist[[ argname ]] <- ll[[ argname ]]
+    }
+    return(arglist)
+}
+
+.slice.run <- function( arglist, runi=1) {
+    r <- lapply( names(arglist), function(name) .garg( arglist, name, runi))
+    names(r) <- names(arglist)
+    r
+}
+
+## ---------------------------------------------------------------------------
+## Line segments
+## ---------------------------------------------------------------------------
+
+.construct.linefunct <- function( x1, y1, x2, y2) {
+    if (x1==x2) {
+        stop("Cannot construct a function from data.")
+    }
+
+    lf <- eval(parse(text=paste("function(x) {",
+        "m <- (",y2,"-",y1,") / (",x2,"-",x1,");",
+        "c <- ",y1," - m * ",x1,";",
+        "return( m * x + c)}",sep=" ")))
+    lf
+}
+
+.intersection.point <- function( f, g ) {
+    ## if lines are parallel, no intersection point
+    if (f(1)-f(0) == g(1)-g(0)) {
+        return( c(Inf,Inf) )
+    }
+
+    ## otherwise, choose search interval
+    imin <- -1
+    imax <- 1
+    while (sign(f(imin)-g(imin)) == sign(f(imax)-g(imax))) {
+        imin <- 2*imin
+        imax <- 2*imax
+    }
+    h <- function(x) { f(x) - g(x) }
+
+    intersect.x <- uniroot( h, interval=c(imin-1,imax+1) )$root
+    intersect.y <- f( intersect.x )
+    return( c(intersect.x, intersect.y ))
+}
+
+#******************************************************************
+setClass("prediction",
+         representation(predictions = "list",
+                        labels      = "list",
+                        cutoffs     = "list",
+                        fp          = "list",
+                        tp          = "list",
+                        tn          = "list",
+                        fn          = "list",
+                        n.pos       = "list",
+                        n.neg       = "list",
+                        n.pos.pred  = "list",
+                        n.neg.pred  = "list"))
+
+setClass("performance",
+         representation(x.name       = "character",
+                        y.name       = "character",
+                        alpha.name   = "character",
+                        x.values     = "list",
+                        y.values     = "list",
+                        alpha.values = "list" ))
+
+#setMethod("plot",signature(x="performance",y="missing"),
+#          function(x,y,...) {
+#              .plot.performance(x,...)
+#          })
+
+setMethod("plot",signature(x="performance",y="missing"),
+          function(x,y,..., avg="none", spread.estimate="none",
+  spread.scale=1, show.spread.at=c(), colorize=FALSE,
+  colorize.palette=rev(rainbow(256,start=0, end=4/6)),
+  colorkey=colorize, colorkey.relwidth=0.25, colorkey.pos="right",
+  print.cutoffs.at=c(), cutoff.label.function=function(x) { round(x,2) },
+  downsampling=0, add=FALSE ) {
+
+              .plot.performance(x,..., 
+              					avg= avg, 
+              					spread.estimate= spread.estimate,
+								spread.scale= spread.scale, 
+								show.spread.at= show.spread.at, 
+								colorize= colorize,
+								colorize.palette= colorize.palette,
+								colorkey= colorkey, 
+								colorkey.relwidth= colorkey.relwidth, 
+								colorkey.pos= colorkey.pos,
+								print.cutoffs.at= print.cutoffs.at, 
+								cutoff.label.function= cutoff.label.function,
+								downsampling= downsampling, 
+								add= add)
+          })
+
+
+## .First.lib <- function( libname, pkgname, where) {
+##     if (!require(methods)) {
+##         stop("Require Methods package")
+##     }
+##     if (!require(gplots)) {
+##         stop("Require gplots package")
+##     }
+    
+##     where <- match(paste("package:",pkgname, sep=""), search())
+## }
+
+#******************************************************************
+ROC.curve<-function(model, response,plotTitle="ROC Curve"){
+  # Function to plot ROC curve for a logistic regression model (Biometry 771 class)
+
+  model.pr <- predict(model, type = "response", model$data)
+  print(performance(prediction(model.pr, response), "auc"))  # Area under the ROC curve
+  cat("Note: The area under the receiver operating characteristic (ROC) curve \nis given at the \"y.values\" slot in the output above.\n")
+  model.perf <- performance(prediction(model.pr, response), "tpr", "fpr")
+  plot(model.perf, lty = 1, xlab = "1 - Specificity", ylab = "Sensitivity",main=plotTitle)
+  abline(a = 0, b = 1, lty = 3)
+  cat("\n")
+  cat("Odds ratio estimates for the parameters in the model:\n")
+  cat("\n")
+  print(exp(coefficients(model)[-1]))
+}
+
+#******************************************************************
+
+#******************************************************************
+ROC.curve.test<-function(model, testSet, response,plotTitle="ROC Curve"){
+  # Function to plot ROC curve for a logistic regression model on test data (Biometry 881 class)
+  
+  model.pr <- predict(model, type = "response", newdata=testSet)
+  print(performance(prediction(model.pr, response), "auc"))  # Area under the ROC curve
+  cat("Note: The area under the receiver operating characteristic (ROC) curve \nis given at the \"y.values\" slot in the output above.\n")
+  model.perf <- performance(prediction(model.pr, response), "tpr", "fpr")
+  plot(model.perf, lty = 1, main = plotTitle, xlab = "1 - Specificity", ylab = "Sensitivity")
+  abline(a = 0, b = 1, lty = 3)
+  cat("\n")
+  cat("Odds ratio estimates for the parameters in the model:\n")
+  cat("\n")
+  print(exp(coefficients(model)[-1]))
+}
+
+```
+
+##Interactively show graphs in lectures
+
+```{r}
+install.packages("manipulate")
+library(manipulate)
+
+
+
+#Logistic regression
+
+x <- seq(-10,10,len=1000)
+
+manipulate(
+  
+  plot(x,exp(beta0+beta1*x) / (1+exp(beta0+beta1*x)),
+       type="l",lwd=3,frame=FALSE,ylim=c(0,1)),
+  beta1 = slider(-2,2,step=.1,initial=2),
+  beta0 = slider(-2,2,step=.1,initial=0)
+  
+)
+
+
+#Simple linear regression
+
+
+x <- seq(-10,10,len=100)
+
+manipulate(
+  plot(x=x,y=beta0+beta1*x, xlim = c(-15, 15), type = "l", ylim=c(-20,20)),
+  beta1 = slider(-5,5,step=0.5,initial=2),
+  beta0 = slider(-10,10,step=1,initial=-1)
+ 
+ )
+
+
+```
+
+## Importing data
+
+```{r}
+chap10data1 <- read.csv("chap10data1.csv", sep=",", header=T)
+chap10data2 <- read.csv("chap10data2.csv", sep=",", header=T)
+chap10data3 <- read.csv("chap10data3.csv", sep=",", header=T)
+chap10data4 <- read.csv("chap10data4.csv", sep=",", header=T)
+View(chap10data1)
+View(chap10data2)
+View(chap10data3)
+View(chap10data4)
+```
+
+
+#Create data.frame for colour blind example
+
+```{r}
+chap10data.cb <- matrix(c(45,126,30,212),byrow=T,nrow=2,ncol=2)
+colnames(chap10data.cb) <- c("Colour.Blind","Not.colour.blind")
+rownames(chap10data.cb) <- c("Male","Female")
+```
+
+#Test for an association
+
+```{r}
+chisq.test(chap10data.cb)
+```
+
+#Example 1
+
+```{r}
+chap10.data1.table1 <- xtabs(~Poured+Guess, data=chap10data1)
+chisq.test(chap10.data1.table1, correct=FALSE)
+chisq.test(chap10.data1.table1, correct=FALSE)$expected 
+fisher.test(chap10.data1.table1)
+```
+
+
+#Example 2
+
+```{r}
+chap10.data2.table1 <- xtabs(~Activity+Province, data=chap10data2)
+chisq.test(chap10.data2.table1, correct=FALSE)
+chisq.test(chap10.data2.table1, correct=FALSE)$expected
+fisher.test(chap10.data2.table1)
+
+```
+
+#Example 3
+#fit logistic regression model
+
+```{r}
+unique(chap10data3$Died)
+chap10data3$Died <- ifelse(chap10data3$Died == "Yes", 1, 0)
+chap10data3.model1 <- glm(Died ~ Birthweight, family=binomial(), data=chap10data3)
+summary(chap10data3.model1)
+```
+
+#visualise the fitted values (probabilities)
+
+```{r}
+plot(chap10data3$Birthweight,chap10data3.model1$fitted,pch=19,col="red",xlab="Birth weight (in g)",ylab="Probability of Death")
+```
+
+#odds ratios for estimates
+
+```{r}
+exp(chap10data3.model1$coefficients)
+exp(confint(chap10data3.model1))
+```
+
+#goodness-of-fit
+
+```{r}
+anova(chap10data3.model1,test="Chisq")
+```
+
+#evaluate the performance of the model - ROC curve
+
+```{r}
+ROC.curve(chap10data3.model1,response=chap10data3$Died)
+```
+
+#evaluate the performance of the model - gini coefficient
+
+```{r}
+chap10data3.model1.pr <- predict(chap10data3.model1,type="response",chap10data3.model1$data)
+chap10data3.model1.auc <- performance(prediction(chap10data3.model1.pr, chap10data3$Died), "auc")
+chap10data3.model1.gini <- abs(1-2*attr(chap10data3.model1.auc,'y.values')[[1]])
+
+```
+
+#diagnostic procedures
+
+```{r}
+influence.measures(chap10data3.model1)
+influence.cutoffs(chap10data3.model1)
+```
+
+#confusion matrix
+
+```{r}
+chap10data3$probs <-predict(chap10data3.model1,type="response")
+chap10data3$preds <- ifelse(chap10data3$probs>=0.2,"Yes","No")
+table(chap10data3[,c("Died","preds")])
+
+```
+
+
+#Example 4
+#Visualise data
+
+```{r}
+# Filter data for 'Died' == "No" and remove rows with missing values in 'Birthweight' or 'Apgar.score'
+filtered_data <- subset(chap10data4, Died == "No" & !is.na(Birthweight) & !is.na(Apgar.score))
+
+# Plot the data
+#plot(x = filtered_data$Apgar.score, 
+    # y = filtered_data$Birthweight, 
+     #col = "blue", 
+     #xlab = "Apgar Score", 
+     #ylab = "Birthweight", 
+     #main = "Birthweight vs Apgar Score (Died = No)")
+```
+
+
+```{r}
+filtered_data <- subset(chap10data4, Died == "No" & !is.na(Birthweight) & !is.na(Apgar_score))
+plot(y=filtered_data$Birthweight,
+     x = filtered_data$Apgar_score,col="blue",ylab="Weight",xlab="Apgar")
+points(y=chap10data4[chap10data4$Died=="Yes",]$Birthweight,
+     x=chap10data4[chap10data4$Died=="Yes",]$Apgar_score,col="red")
+
+scatterplotMatrix(~Birthweight + Apgar_score + Temperature,data=chap10data4,
+                  groups=chap10data4$Died,
+                  main="ScatterPlot Matrix of Chapter 4 Dataset 4")
+```
+
+#fit logistic regression model
+
+```{r}
+chap10data4$Died <- ifelse(chap10data3$Died == "Yes", 1, 0)
+chap10data4.model1 <- glm(Died ~ ., family=binomial(), data=chap10data4)
+summary(chap10data4.model1)
+```
+
+#assess multicollinearity
+
+```{r}
+vif(chap10data4.model1)
+```
+
+#variable selection
+
+```{r}
+stepwise(chap10data4.model1,direction="backward/forward",criterion="AIC")
+allSubsets.LogistReg(chap10data4,y.name="Died",perf.measure="AIC")
+```
+
+#fit the final model
+
+```{r}
+chap10data4.model2 <- glm(Died ~ Delivery_mode+Birthweight+Apgar_score, family=binomial(), data=chap10data4)
+summary(chap10data4.model2)
+```
+
+#Assess the final model
+
+```{r}
+chap10data4$Died <- factor(chap10data4$Died, levels = c("No", "Yes"))
+```
+
+
+```{r}
+# Fit the logistic regression model
+chap10data4.model2 <- glm(Died ~ Birthweight + Apgar_score, family = binomial(), data = chap10data4)
+
+# Calculate predicted probabilities
+chap10data4$Probs <- predict(chap10data4.model2, type = "response")
+
+# Generate predictions based on a threshold of 0.2
+chap10data4$Preds <- ifelse(chap10data4$Probs >= 0.2, "Yes", "No")
+
+# Convert predictions to a factor
+chap10data4$Preds <- factor(chap10data4$Preds, levels = c("No", "Yes"))
+```
+
+
+
+```{r}
+```
+
+```{r}
+ROC.curve(chap10data4.model2,response=chap10data4$Died)
+calcGini(chap10data4.model2,Y=chap10data4$Died)
+chap10data4$Probs <- predict(chap10data4.model2,type="response")
+chap10data4$Preds <- ifelse(chap10data4$Probs>=0.2,"Yes","No")
+table(chap10data4$Preds,chap10data4$Died)
+mean(chap10data4$Preds!=chap10data4$Died)
+```
+
+#predicting with the final model
+
+```{r}
+predict(chap10data4.model2,newdata=data.frame(Delivery.mode="Caesarean",Birthweight=1000,Apgar.score=6),type="response")
+```
+
+

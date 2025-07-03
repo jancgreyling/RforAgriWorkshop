@@ -1,0 +1,182 @@
+---
+title: "SLR"
+format: html
+editor: visual
+---
+
+# I- Introduction
+
+(See Biometry 721-821 workbook (2024) page 43)
+
+# II- The Basics
+
+## Load required pacakges
+
+```{r}
+library(RcmdrMisc)
+library(ggplot2)
+```
+
+## Importing data
+
+```{r}
+chap6data1 <- read.csv("chap6data1.csv", sep=",", header=T)
+chap6data2 <- read.csv("chap6data2.csv", sep=",", header=T)
+View(chap6data1)
+View(chap6data2)
+```
+
+#Example 1 #visual presentation of data
+
+```{r}
+chap6data1.plot1 <- ggplot(data=chap6data1,aes(y=MetabolicRate,x=BodyWeight)) 
+chap6data1.plot1 + geom_point(size=2) 
+chap6data1.plot1 + geom_point(size=2)+ geom_smooth(method=lm,se=F)
+```
+
+## Fit the model
+
+```{r}
+chap6data1.model1 <- lm(MetabolicRate~BodyWeight,data=chap6data1)
+summary(chap6data1.model1)
+anova(chap6data1.model1)
+```
+
+The formula of the fitted model is
+
+$$Y = 811.2267 + 7.0595 X$$
+
+## Interpretation of the parameter estimates
+
+### Intercept
+
+The average metabolic rate when body weight is zero is approximately 811.2267 units.
+
+### BodyWeight
+
+For each additional unit of body weight, the metabolic rate increases by about 7.0595 units.
+
+### Determine whether greater weight is associated with greater metabolism.
+
+Given the positive coefficient ($7.0595$) for BodyWeight, we can conclude that greater weight is indeed associated with greater metabolism. This positive relationship suggests that as body weight increases, metabolic rate also increases.
+
+# III- Diagnostic checks
+
+## III-1- Determine and interpret the coefficient of determination of the metabolism data
+
+Since Multiple R-squared($R^{2}$) is equal to $0.5539$, then approximately $55.39\%$ of the variability in Metabolic Rate can be explained by Body weight.
+
+### Model diagnostics
+
+To assess the influence of individual data points on the linear regression model `chap6data1.model1`, we use influence measures and studentized residuals.
+
+```{r}
+influence.measures(chap6data1.model1)
+matrix(rstudent(chap6data1.model1),ncol=1) #Studentized Residuals
+```
+
+#### Influence Measures
+
+The `influence.measures()` function in R provides a comprehensive set of influence diagnostics, including:
+
+-   **DFBETAS**: Measures the effect of deleting each observation on the estimated coefficients.
+-   **DFFITS**: Measures the effect of deleting each observation on the fitted values.
+-   **COVRATIO**: Measures the effect of deleting each observation on the covariance matrix of the estimated coefficients.
+-   **Cook's Distance**: Measures the influence of deleting each observation on the estimated regression coefficients.
+-   **Hat values (Leverage)**: Measures the influence of each observation on the fitted values.
+
+##### Interpretation
+
+-   **DFBETAS**: Values close to 0 indicate little influence. Large absolute values (e.g., \> 1 for small datasets) suggest influential observations.
+-   **DFFITS**: Values larger than 1 or $\frac{2\sqrt{k+1}}{n}$ (where $k$ is the number of predictors and $n$ number of observations) suggest influential observations.
+-   **COVRATIO**: Values far from 1 indicate influential observations affecting the covariance matrix.
+-   **Cook's Distance**: Values larger than 1 indicate highly influential observations.
+-   **Hat values (Leverage)**: Values larger than $\frac{2k}{n}$ suggest high leverage points.
+
+#### Studentized Residuals
+
+Studentized residuals are residuals divided by an estimate of their standard deviation. They help identify outliers and are calculated as: $$r_{i} = \frac{\epsilon_{i}}{s(\epsilon_{i})}$$, where where $\epsilon_{i}$ is the residual for observation $i$ and $s(\epsilon_{i})$ is its standard deviation.
+
+##### Interpretation
+
+If $\vert r_{i} \vert > 2$, then there is potential outliers.
+
+
+
+Use the following code to add the diagnostic measures and the fitted values to the original data set.
+```{r}
+within(chap6data1, {
+FittedValues <- fitted(chap6data1.model1)
+  Residuals <- residuals(chap6data1.model1)
+  StudentizedResiduals <- rstudent(chap6data1.model1)
+  HatValues <- hatvalues(chap6data1.model1)
+  CooksDistance <- cooks.distance(chap6data1.model1)
+  ObsNumber <- 1:nrow(chap6data1)
+})
+
+#head(chap6data1)
+```
+
+### Creating Influence.Cutoffs function 
+```{r}
+influence.cutoffs <- function(model){
+  p <- length(model$coefficients)
+  n <- length(model$residuals)
+  
+  DFBETAS <- 2/(n^0.5)
+  DFFITS <- 2*(p/n)^0.5
+  COVRATIO.lwr <- 1-3*p/n
+  COVRATIO.upr <- 1+3*p/n
+  cook.D <- 4/n
+  HATDIAG <- 2*p/n
+  
+  list(DFBETAS=DFBETAS,DFFITS=DFFITS,COVRATIO.lwr=COVRATIO.lwr,COVRATIO.upr=COVRATIO.upr,cook.D=cook.D,HATDIAG=HATDIAG)
+}
+
+influence.cutoffs(chap6data1.model1)
+```
+
+#Assess assumptions: normality and homoscedasticity
+```{r}
+par(mfrow=c(2,2))
+base::plot(chap6data1.model1)
+par(mfrow=c(1,1))
+shapiro.test(chap6data1.model1$residuals)
+```
+
+### Prediction
+```{r}
+chap6data1.pred <- data.frame(BodyWeight=c(70,100))
+predict(chap6data1.model1,newdata=chap6data1.pred,interval="confidence")
+predict(chap6data1.model1,newdata=chap6data1.pred,interval="prediction")
+chap6data1.pred2 <- cbind(chap6data1.pred,predict(chap6data1.model1,newdata=chap6data1.pred,interval="confidence"))
+
+chap6data1.predictions <- cbind(chap6data1,predict(chap6data1.model1,newdata=chap6data1.pred, interval="prediction"))
+print(chap6data1.predictions)
+g <- ggplot(chap6data1.predictions,aes(x=BodyWeight,y=MetabolicRate)) + geom_point() + geom_line(aes(y = fit),colour = "blue", size = 1) + stat_smooth(method=lm) + geom_ribbon(aes(ymin = lwr, ymax = upr),  fill = "blue", alpha = 0.4)
+g + geom_point(data=chap6data1.pred2,aes(x=BodyWeight,y=fit),col="red")
+
+```
+
+
+# IV- Exercises
+
+Exercise 1
+
+With the data from C&S Example 7.1, p. 64 (chap6exer1.csv): Perform a simple linear regression of
+Area (𝑌) on Stem length (𝑋) and give the equation of the best-fitting regression line, as well as the
+coefficient of determination (𝑅2 ). Interpret the 𝑅2 value. Also test the assumptions underlying this
+regression model, and clearly state your conclusions with regard to the validity of the fitted model.
+
+
+Exercise 2
+
+With the data from C&S Example 7.2, p. 69 (chap6exer2.csv): Perform a simple linear regression of
+wheat yield (𝑌) on nitrogen fertilizer (𝑋) and give the equation of the best-fitting regression line. Predict the wheat yield for a nitrogen fertilizer level of 𝑋 = 80kg nitrogen per hectare (also include the confidence and prediction intervals in your answer, and clearly interpret).
+
+Exercise 3
+
+Do C&S Exercise 7.2 (p. 84). The data is in the file chap6exer3.csv. A study was undertaken to find
+out if tree diameter measurements 1.5m above ground level can be used to predict heights for a certain
+species. The measurements of 12 trees are shown in the csv file. Complete a thorough regression
+analysis (significance, R-squared, assumptions).

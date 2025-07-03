@@ -1,0 +1,445 @@
+---
+title: "Day 2 - t-test"
+format: html
+editor: visual
+---
+
+# Day 2 Part 1 - t-tests
+
+## 2.1- Introduction
+
+In this chapter, you will learn how to use the t-test to:
+
+-   compare the mean of a single population to a fixed value
+-   compare means of two independent populations with one another
+-   compare means of two dependent populations with one another
+
+Let us start by defining some concepts
+
+### 2.1.1- Population
+
+In statistics, a population is a set of similar items or events which is of interest for some question or experiment (see <https://https://en.wikipedia.org/wiki/Statistical_population>)
+
+### 2.1.2- Sample
+
+In statistics, a sample is a selection (subset) of data from a larger group of data, (called the population.) A sample should be representative of the population, this means the sample and the population should have similar properties.
+
+### 2.1.3- Hypotheses
+
+in Statistics, a hypothesis is defined as a formal statement, which gives the explanation about the relationship between the two or more variables of the specified population.
+
+### 2.1.4- Null hypothesis
+
+The null hypothesis in statistics states that there is no difference between groups or no relationship between variables or it can be seen by what we expect to see based on current knowledge.
+
+### 2.1.4- Alternative hypothesis
+
+The null hypothesis presents a new ides which could overturn - or nullify - the null hypothesis
+
+### 2.1.5- Two-sided alternative hypothesis
+
+A two-sided alternative hypothesis test results from an alternative hypothesis which does not specify a direction. i.e. when the alternative hypothesis states that the null hypothesis is wrong.
+
+[Example 1]{style="color:red;"}: A light bulb manufacturer claims that its' energy saving light bulbs last an average of 60 days. Set up a hypothesis test to check this claim. and comment on what sort of test we need to use.
+
+[Solution 1]{style="color:red;"}: So we have
+
+H0:The mean lifetime of an energy-saving light bulb is 60 days.
+
+H1: The mean lifetime of an energy-saving light bulb is not 60 days.
+
+Because of the "is not" in the alternative hypothesis, we have to consider both the possibility that the lifetime of the energy-saving light bulb is greater than 60 and that it is less than 60. This means we have to use a Two-sided alternative hypothesis.
+
+### 2.1.6- One-sided alternative hypothesis
+
+A one-tailed test results from an alternative hypothesis which specifies a direction. i.e. when the alternative hypothesis states that the parameter is in fact either bigger or smaller than the value specified in the null hypothesis.
+
+#### 2.1.6.1 Left one-sided alternative hypothesis and right one-sided alternative hypothesis
+
+A one-tailed test results from an alternative hypothesis which specifies a direction. i.e. when the alternative hypothesis states that the parameter is in fact smaller than the value specified in the null hypothesis.
+
+### 2.1.6.2 Right one-sided alternative hypothesis and right one-sided alternative hypothesis
+
+A one-tailed test results from an alternative hypothesis which specifies a direction. i.e. when the alternative hypothesis states that the parameter is in fact bigger than the value specified in the null hypothesis.
+
+[Example 2]{style="color:red;"}: The manufacturer now decides that it is only interested whether the mean lifetime of an energy-saving light bulb is less than 60 days. What changes would you make from Example 1?
+
+[Solution 2]{style="color:red;"}: So we have
+
+H0:The mean lifetime of an energy-saving light bulb is 60 days.
+
+H1: The mean lifetime of an energy-saving light bulb is less than 60 days.
+
+### 2.1.7 Test statistic
+
+The test statistic of a set of data is a value which summarises the entire data set. The choice of test statistic will vary depending upon the distribution being used. If the test statistic is in the critical region then the alternative hypothesis is accepted. Otherwise the null hypothesis is accepted.
+
+### 2.1.8 Confidence interval
+
+A confidence interval, also known as the acceptance region, is a set of values for the test statistic for which the null hypothesis is accepted. i.e. if the observed test statistic is in the confidence interval then we accept the null hypothesis and reject the alternative hypothesis.
+
+### 2.1.9 Significance Levels
+
+Confidence intervals can be calculated at different significance levels. We use α to denote the level of significance and perform a hypothesis test with a $100(100-\alpha)\%$ confidence interval.
+
+Confidence intervals are usually calculated at $5\%$ or $1\%$ significance levels, for which $\alpha=0.05$ and $\alpha=0.01$ respectively. Note that a $95\%$ confidence interval does not mean there is a $95\%$ chance that the true value being estimated is in the calculated interval. Rather, given a population, there is a $95\%$ chance that choosing a random sample from this population results in a confidence interval which contains the true value being estimated.
+
+### 2.1.10 Critical region
+
+A critical region, also known as the rejection region, is a set of values for the test statistic for which the null hypothesis is rejected. i.e. if the observed test statistic is in the critical region then we reject the null hypothesis and accept the alternative hypothesis.
+
+### 2.1.11 Critical value
+
+The critical value at a certain significance level can be thought of as a cut-off point. If a test statistic on one side of the critical value results in accepting the null hypothesis, a test statistic on the other side will result in rejecting the null hypothesis.
+
+### 2.1.12 p-value
+
+The p value, or probability value, tells you how likely it is that your data could have occurred under the null hypothesis. It does this by calculating the likelihood of your test statistic, which is the number calculated by a statistical test using your data.
+
+### 2.2 One sample t-test (C&S 5.2, p. 39)
+
+Import into R the chap2data1.csv file. The data represent 15-day comb masses of male chicks that each received a certain sex hormone. Use R to test the following hypotheses:
+
+-   That the true population mean comb mass is equal to 120g vs. the (two-sided) alternative that the true population mean is not equal to 120g.
+-   That the 15-day comb masses of chicks given sex hormone A are on average equal to 90g vs. the (one-sided right) alternative that they are greater than 90g.
+-   That the average 15-day comb mass for chicks on this hormone is equal to 100g vs. the (one- sided left) alternative that they are less than 100g.
+
+With a one sample t-test, there is only one sample. The sample mean gets compared to a specific value (decided by researcher or the greater population)
+
+```{r}
+# Loading require packages
+library(RcmdrMisc)
+```
+
+```{r}
+# Import data csv file
+df_1 <- read.csv(
+  file.path("chap2data1.csv"),
+  sep    = ",",
+  header = TRUE
+)
+```
+
+```{r}
+#view the data
+head(df_1)
+tail(df_1)
+```
+
+```{r}
+# This performs a two-sided t-test to check if the mean of Comb_mass is significantly different from 120.
+t.test(df_1$`Comb_mass`,alternative="two.sided",mu=120)
+#t.test(df_1$`Comb_mass`,alternative="greater",mu=90)
+#t.test(df_1$`Comb_mass`,alternative="less",mu=100)
+
+
+```
+
+### 2.2.1 Interpretation
+
+**Hypothesis**
+
+-   Null hypothesis (H0): The true mean of the "Comb_mass" is equal to 120.
+-   Alternative hypothesis (H1): The true mean of the "Comb_mass" is not equal to 120 (two-sided test).
+
+The t-test is based upon two assumptions. Therefore, before you can believe the results of a t-test, you have to make sure that the assumptions are tenable for the particular data set. The one-sample t-test assumes:
+
+-   Normally-distributed data
+-   Independent observations
+
+Proper *randomisation* in the sampling procedure should ensure independence of the observations. To test the normality assumption we may use the Shapiro-Wilk test. In addition, histograms and quantile-quantile (Q-Q) plots can be drawn as rough indications of the level of normality, or the lack of it.
+
+```{r}
+# Shapiro-Wilk test for normality assumption
+shapiro.test(df_1$`Comb_mass`)
+```
+
+#### 2.2.2 Interpretation of the shapiro-Wilk normality test
+
+The Shapiro-Wilk test was conducted to assess whether the `Comb_mass` data is normally distributed.
+
+-   **Null Hypothesis ((H_0))**: The `Comb_mass` data follows a normal distribution.
+-   **Alternative Hypothesis ((H_A))**: The `Comb_mass` data does not follow a normal distribution.
+
+The test produced a W statistic of **0.89377** and a p-value of **0.1549**.
+
+### Interpretation
+
+Given that the p-value is greater than the commonly used significance level of 0.05, we **fail to reject the null hypothesis**. This means that there is not enough evidence to suggest that the `Comb_mass` data significantly deviates from a normal distribution.
+
+### Conclusion
+
+Based on the results of the Shapiro-Wilk test, it is reasonable to conclude that the `Comb_mass` data is likely normally distributed. Therefore, assumptions of normality for subsequent analyses are likely met.
+
+```{r}
+qqPlot(df_1$`Comb_mass`,main="QQ plot",ylab="Comb mass",xlab="Quantiles")
+```
+
+#### I.2.3 Interpretation of the QQ Plot Interpretation
+
+The QQ plot is used to assess whether the `Comb_mass` data follows a normal distribution. Below is the interpretation of the plot:
+
+### Quantiles vs. Theoretical Quantiles
+
+-   The x-axis represents the theoretical quantiles from a normal distribution.
+-   The y-axis represents the sample quantiles from the `Comb_mass` data.
+
+### Line of Best Fit
+
+-   The blue line in the plot represents the line of best fit that the data would follow if it were perfectly normally distributed.
+-   Data points that fall along this line suggest that the data is close to normally distributed.
+
+### Observed Data Points
+
+-   The circles on the plot represent the actual data points.
+-   Points that deviate from the line indicate deviations from normality.
+
+### Confidence Bands
+
+-   The shaded blue area represents the confidence bands around the line of best fit.
+-   Points within this shaded area suggest that the data is likely normal within some variability.
+-   Points outside this area suggest possible deviations from normality.
+
+### Specific Observations
+
+-   **Center of the Plot**:
+    -   The points in the center of the plot follow the line closely, indicating that the central portion of the data fits the normal distribution well.
+-   **Tails of the Distribution**:
+    -   Some points in the lower left and upper right tails deviate from the line and fall outside the confidence bands.
+    -   This suggests there might be some deviations from normality in the tails of the distribution.
+
+### Conclusion
+
+Overall, the QQ plot indicates that the `Comb_mass` data generally follows a normal distribution, particularly in the central part of the data. However, there are slight deviations in the tails, which may suggest mild non-normality. This aligns with the results of the Shapiro-Wilk test, where the null hypothesis of normality was not rejected. While the data is not perfectly normal, it is close enough to meet the assumptions for most analyses.
+
+If the data are not normal, the data can be transformed, or a non-parametric test can be performed instead of a t-test.
+
+### I.3 Two independent samples t-test (C&S 6.2, p. 51)
+
+Import into R the file chap2data2.csv.
+
+```{r}
+df_2 <-read.csv("chap2data2.csv", sep=",", header=T)
+```
+
+```{r}
+head(df_2)
+tail(df_2)
+```
+```{r}
+View(df_2)
+```
+
+The data represent 15-day comb masses of eleven male chicks that each received sex hormone A, and 15-day comb masses of eleven other male chicks that each received sex hormone B. The chicks were randomly assigned to receive one of the two sex hormones.
+
+When the true means of two populations are to be compared using a t-test, it is first necessary to determine whether we can assume equality of the population variances or not. Depending on whether this assumption of homoscedasticity can be made, we will use either a pooled t-test or a t-test for unequal variances to compare the true means. To test for homoscedasticity of two populations we make use of the 𝐹-test (C&S 6.5, p. 58).
+
+Test the following hypotheses about the population mean comb mass using R:
+
+-   That the mean comb mass for hormone A chicks is the same as that for hormone B chicks.
+-   That the mean comb mass for hormone A chicks is 20g greater than that for hormone B chicks.
+-   That the mean comb mass for hormone B chicks is 12g less than that for hormone A chicks vs. the alternative that the mean mass difference is greater than 12g.
+
+Let us use the F-test for homoscedasticity
+
+```{r}
+# Calculate variances 
+with(df_2, tapply(Comb_mass, Hormone,
+var, na.rm=TRUE))
+
+# Perform F-test
+var.test(Comb_mass~Hormone,alternative="two.sided",data=df_2)
+```
+
+#### 2.3.1- Interpretation of F-Test for Equality of Variances
+
+### Group Variances
+
+The variance of `Comb_mass` for each level of the `Hormone` factor was calculated:
+
+-   **Hormone A**: 847.2
+-   **Hormone B**: 774.8
+
+### F-Test Results
+
+An F-test was performed to compare the variances between the two hormone groups:
+
+-   **F-value**: 1.0934
+-   **Degrees of Freedom**: Numerator (Hormone A): 10, Denominator (Hormone B): 10
+-   **p-value**: 0.8904
+-   **Confidence Interval for the Ratio of Variances (95%)**: \[0.2942, 4.0641\]
+-   **Ratio of Variances**: 1.0934
+
+### Interpretation
+
+-   **Null Hypothesis ((H_0))**: The variances of `Comb_mass` in the two groups are equal (i.e., the ratio of variances is 1).
+-   **Alternative Hypothesis ((H_A))**: The variances of `Comb_mass` in the two groups are not equal (i.e., the ratio of variances is not 1).
+
+Given that the p-value is 0.8904, which is much greater than the commonly used significance level of 0.05, we **fail to reject the null hypothesis**. This suggests that there is no significant difference in the variances of `Comb_mass` between the two hormone groups.
+
+### Conclusion
+
+-   The F-test results indicate that the variances between Hormone A and Hormone B groups are not significantly different.
+-   The ratio of variances (1.0934) and the wide confidence interval \[0.2942, 4.0641\] further support the conclusion that the variances are comparable, and any observed differences are likely due to random variation rather than a true underlying difference in variance.
+
+Thus, we can reasonably assume that the variances of `Comb_mass` are equal across the two hormone groups, which supports the use of parametric tests that assume homogeneity of variance.
+
+Test the normality of the hormone treatment groups separately for the comb mass data. As before, if the data are not normally distributed, a non-parametric test must be performed instead of a t-test.
+
+If the data consist of paired observations, consider a t-test for dependent samples, explained in the next section.
+
+```{r}
+#Checking normality assumption (two or more groups simultaneously)
+shapiro.test(df_2[df_2[,"Hormone"]=="A","Comb_mass"])
+shapiro.test(df_2[df_2[,"Hormone"]=="B","Comb_mass"])
+```
+
+```{r}
+#t test
+t.test(x=chap2data2[1:11,"Comb_mass"],y=chap2data2[12:22,"Comb_mass"],alternative="two.sided",mu=0)
+t.test(Comb_mass~Hormone,data=chap2data2)
+```
+
+#### I.3.2- Two-Sample t-Test Interpretation
+
+The two-sample t-test was conducted to determine if there is a significant difference in the mean `Comb_mass` between two groups from the `chap2data2` dataset.
+
+#### Hypotheses
+
+-   **Null Hypothesis ((H_0))**: The mean `Comb_mass` of Group X is equal to the mean `Comb_mass` of Group Y (($\mu_X = \mu_Y$)).
+-   **Alternative Hypothesis ((H_A))**: The mean `Comb_mass` of Group X is different from the mean `Comb_mass` of Group Y (($\mu_X \neq \mu_Y$)).
+
+#### Test Results
+
+-   **t-value**: 3.3764
+-   **Degrees of Freedom**: 19.96
+-   **p-value**: 0.003006
+-   **95% Confidence Interval**: \[15.67, 66.33\]
+-   **Mean of Group X**: 97
+-   **Mean of Group Y**: 56
+
+#### Interpretation
+
+The t-test results reveal a **t-value** of 3.3764 with **19.96 degrees of freedom**. The associated **p-value** is 0.003006, which is significantly less than the conventional significance level of 0.05. This indicates strong evidence against the null hypothesis, suggesting that the difference in mean `Comb_mass` between the two groups is statistically significant.
+
+The **95% confidence interval** for the difference in means is \[15.67, 66.33\]. This interval does not include zero, further supporting the conclusion that there is a significant difference between the means. Specifically, the mean `Comb_mass` for Group X is higher than that for Group Y.
+
+### Conclusion
+
+Given the p-value and the confidence interval, we **reject the null hypothesis** and conclude that there is a statistically significant difference in the mean `Comb_mass` between Group X and Group Y. The mean `Comb_mass` in Group X (97) is significantly greater than in Group Y (56), which suggests a meaningful difference in the context of the study.
+
+This result indicates that the factor associated with Group X leads to a higher `Comb_mass` compared to Group Y. Further investigation may be required to understand the underlying factors contributing to this difference.
+
+### I.4 Two dependent samples t-test (C&S 5.8, p. 46)
+
+Often, the data from two samples are not unrelated but *paired*. For example, ten people are about to embark on a diet: they are weighed *before* and again *after*. The same people are weighed twice. This is done either by
+
+1- telling the software to perform a *paired t-test*, or
+
+2- manually calculating a column of differences in the paired values and then performing a one- sample t-test on this new column.
+
+Import the *before* and *after* masses from the file chap2data3.csv. Note the format of the data.
+
+```{r}
+chap2data3 <-read.csv("chap2data3.csv", sep=",", header=T)
+head(chap2data3)
+tail(chap2data3)
+```
+
+Now test the following hypotheses:
+
+-   That the diet has no effect (or is ineffective).
+-   That on average the diet leads to weight-loss of 10kg.
+-   That on average the diet leads to weight-loss of 12kg vs. the alternative that the average weight-loss is less than 12kg.
+
+```{r}
+# That the diet has no effect (or is ineffective).
+with(chap2data3,(t.test(Before,After,alternative='two.sided',conf.level=.95, paired=TRUE)))
+
+#Creating a variable, Diff (which is the difference between before and after) in the chap2data3 data set
+chap2data3$Diff <- chap2data3[,2] - chap2data3[,1]
+```
+
+This test is based on the assumption that the *paired differences* are normally distributed and independent of one another. The assumption of normality can be tested in the same way as in the one sample case, but based on a column of differences in the paired values. Use *R* to check whether the paired differences of the weight loss data came from a normally distributed population. Once again, if the assumption of normality is not valid, the differences can be transformed, or a non- parametric test can be performed instead of a t-test.
+
+```{r}
+#Checking the normality of the differences
+head(chap2data3)
+shapiro.test(chap2data3$Diff)
+```
+
+### I.5 Power analysis
+
+Consider the following definitions:
+
+Type I error -- rejecting the null hypothesis when it is true (false positive) Type II error -- not rejecting the null hypothesis when it is false (false negative) Power -- the probability to not commit a type II error. A power analysis investigates and uses the relationship between power and sample size to determine the optimal sample size for your experiment. This relationship is investigated under various circumstances of natural variation, level of significance and effect sizes (smallest detectable differences).
+
+#### I.5.1 Learning by example
+
+Consider again the data in the file 'chap2data3.csv'. Let's investigate the relationship between power and sample size for the comb.mass variable given that the estimate of the natural variation is the pooled variance, the level of significance is equal to 5% and that we want to detect a difference between the two hormones as small as 35g. Calculate the power for sample sizes of 5, 7, 9, 11, 13 and 15. Visualize the results with a scatter plot. Investigate this relationship for changes in the smallest detectable difference (delta) values. Use 20g, 35g and 50g in the analysis. What is the effect of changing the sample size and the smallest detectable difference on power?
+
+```{r}
+#power analysis
+#Power is defined as the probability to reject the null hypothesis (if false) 
+
+#Estimated the pooled variance (sp2)
+hA <- chap2data2[chap2data2$Hormone=="A",][,1]
+hB <- chap2data2[chap2data2$Hormone=="B",][,1]
+
+SSA <- sum(hA^2)-sum(hA)^2/length(hA)
+SSB <- sum(hB^2)-sum(hB)^2/length(hB)
+
+sp2 <- (SSA+SSB)/(length(hA)+length(hB)-2)
+sp2
+
+#or
+
+sp2 <- anova(lm(Comb_mass~Hormone,data=chap2data2))[2,3]
+sp2
+
+
+```
+
+```{r}
+#Example, for n=11
+power.t.test(power=NULL,n=11,sd=sp2^.5,delta=35)
+
+#Extract only the value for power
+power.t.test(power=NULL,n=11,sd=sp2^.5,delta=35)$power
+```
+
+```{r}
+
+
+delta <- 20
+
+pwrTable <- data.frame(sample_size=c(5,7,9,11,13,15),
+                       pwr=c(power.t.test(power=NULL,n=5,sd=sp2^.5,delta=delta)$power,
+                             power.t.test(power=NULL,n=7,sd=sp2^.5,delta=delta)$power,
+                             power.t.test(power=NULL,n=9,sd=sp2^.5,delta=delta)$power,
+                             power.t.test(power=NULL,n=11,sd=sp2^.5,delta=delta)$power,
+                             power.t.test(power=NULL,n=13,sd=sp2^.5,delta=delta)$power,
+                             power.t.test(power=NULL,n=15,sd=sp2^.5,delta=delta)$power))
+
+
+plot(pwrTable,main="When delta=20g")
+
+```
+
+### I.6- Exercises
+
+##### Exercise 1
+
+With the data from C&S Example 5.1 (p. 41) (chap2exer1.csv), test if the mean linseed yield is equal to 2.0. Use a 5% significance level and clearly state your conclusion.
+
+##### Exercise 2
+
+Do C&S Exercise 5.1 (p. 45) (chap2exer2.csv). Test if the population mean is different from 8. Carry out the appropriate test, starting (and testing) any assumptions you make.
+
+##### Exercise 3
+
+With the data from C&S Table 5.2 (p. 48) (chap2exer3.csv) Perform a paired t-test to see if the mean yield from the two wheat varieties differ. Use a 5% significance level. Calculate the sample differences between the two varieties (per farm), and perform a test to see if the mean difference is equal to zero.
+
+##### Exercise 4
+
+Use *R* to do C&S Exercise 6.2 (p. 61) (chap2exer4.csv). That is, test if Varieties A and B are significantly different. Data are the yields (in t/ha).

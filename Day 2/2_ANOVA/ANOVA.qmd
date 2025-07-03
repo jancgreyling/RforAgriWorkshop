@@ -1,0 +1,262 @@
+---
+title: "ANOVA"
+format: html
+editor: visual
+---
+
+# I- ANOVA
+
+## I.1- Introduction
+
+(See Biometry 721-821 workbook (2024))
+
+## I.2- Completely Randomised design (C&S chapter 9, p. 102)
+
+(See Biometry 721-821 workbook (2024))
+
+Load the packages
+
+```{r}
+library(RcmdrMisc)
+library(ggplot2)
+```
+
+Import data
+
+```{r}
+chap3data1 <- read.csv("chap3data1.csv", sep=",", header=T)
+chap3data2 <- read.csv("chap3data2.csv", sep=",", header=T)
+chap3data3 <- read.csv("chap3data3.csv", sep=",", header=T)
+View(chap3data1)
+View(chap3data2)
+View(chap3data3)
+#read.csv(paste0(getwd(),"/Data/Examples/chap3data1.csv"),header=T)
+#chap3data2 <- read.csv(paste0(getwd(),"/Data/Examples/chap3data2.csv"),header=T)
+#chap3data3 <- read.csv(paste0(getwd(),"/Data/Examples/chap3data3.csv"),header=T)
+```
+
+Setting categorical variables to be factors Running general linear model (ANOVA)
+
+```{r}
+chap3data1$Oil_type <- as.factor(chap3data1$Oil_type) 
+chap3data1.model1 <- aov(Fat_absorbed~Oil_type,data=chap3data1)
+summary(chap3data1.model1)
+```
+
+## I.2.1- Interpretation
+
+The ANOVA analysis was conducted to determine if different types of oil (`Oil_type`) have a significant effect on the amount of fat absorbed (`Fat_absorbed`). Below is an explanation of the key results from the ANOVA summary table:
+
+-   **Degrees of Freedom (Df):** The `Oil_type` factor has 3 degrees of freedom, corresponding to the number of different oil types minus one. The residuals, which represent the unexplained variance, have 20 degrees of freedom.
+
+-   **Sum of Squares (Sum Sq):** The sum of squares for `Oil_type` is 1636, indicating the variation in `Fat_absorbed` attributable to differences in oil type. The residual sum of squares is 2018, representing the variation in `Fat_absorbed` that cannot be explained by `Oil_type`.
+
+-   **Mean Square (Mean Sq):** The mean square for `Oil_type` is 545.5, calculated by dividing the sum of squares by its degrees of freedom. The residual mean square is 100.9, representing the average amount of unexplained variation.
+
+-   **F value:** The F value is 5.406, which is the ratio of the variance explained by `Oil_type` to the unexplained variance (residuals). A higher F value suggests a stronger effect of `Oil_type`.
+
+-   **Pr(\>F) (p-value):** The p-value is 0.00688, which indicates the probability of observing such an extreme F value if the null hypothesis (no effect of `Oil_type` on `Fat_absorbed`) were true. Since the p-value is less than 0.01, we reject the null hypothesis, concluding that `Oil_type` significantly affects `Fat_absorbed`.
+
+### Conclusion
+
+The results of the ANOVA analysis show that the type of oil (`Oil_type`) has a statistically significant effect on the amount of fat absorbed (`Fat_absorbed`). Given the p-value of 0.00688, we can conclude with strong evidence that different oil types lead to different amounts of fat absorption. This effect is statistically significant at the 0.01 level, as indicated by the double asterisks (`**`).
+
+Testing for normality
+
+```{r}
+par(mfrow=c(2,2))
+plot(chap3data1.model1)
+
+chap3data1$residuals <- chap3data1.model1$residuals
+shapiro.test(chap3data1$residuals)
+```
+
+## Diagnostic Plots Interpretation
+
+### Residuals vs Fitted Plot
+
+The "Residuals vs Fitted" plot shows a random scatter of residuals around the horizontal line at 0, suggesting that the assumption of homoscedasticity (constant variance) is reasonably met. There is no clear pattern in the residuals, which indicates that the model's linearity assumption is also satisfied.
+
+### Normal Q-Q Plot
+
+The "Q-Q Residuals" plot suggests that the residuals are approximately normally distributed. Most points lie close to the diagonal line, although there are slight deviations at the tails, which may indicate mild departures from normality. However, these deviations are not severe enough to raise immediate concerns.
+
+### Scale-Location Plot
+
+The "Scale-Location" plot (also known as the spread-location plot) checks for the homogeneity of variance. The red line is relatively flat, indicating that the variance of residuals is approximately constant across the range of fitted values. This further supports the assumption of homoscedasticity.
+
+### Residuals vs Leverage Plot
+
+The "Residuals vs Factor Levels" plot shows the standardized residuals against the factor levels of `Oil_type`. There are no points with exceptionally high leverage or Cook's distance, which means there are no influential observations that unduly affect the model.
+
+### Conclusion
+
+Overall, the diagnostic plots suggest that the assumptions of the ANOVA model are reasonably met. The residuals appear to be normally distributed, and the variance of residuals is consistent across the fitted values, indicating that the model is a good fit for the data.
+
+## Shapiro-Wilk Test for Normality
+
+The Shapiro-Wilk test was conducted to assess the normality of the residuals from the ANOVA model.
+
+-   **W = 0.97217**: The Shapiro-Wilk statistic.
+-   **p-value = 0.7205**: Since the p-value is greater than 0.05, we fail to reject the null hypothesis. This indicates that the residuals are normally distributed.
+
+### Conclusion
+
+The Shapiro-Wilk test results, combined with the diagnostic plots, suggest that the residuals of the ANOVA model follow a normal distribution. Therefore, the assumption of normality is satisfied, supporting the validity of the ANOVA results.
+
+## Test for constant variance among groups ( Bartlett Test for Homogeneity of Variances)
+
+```{r}
+bartlett.test(Fat_absorbed ~ Oil_type, data=chap3data1)
+```
+
+The Bartlett test was conducted to assess the homogeneity of variances across the different oil types (`Oil_type`).
+
+-   **Bartlett's K-squared = 1.7504**: The test statistic for Bartlett's test.
+-   **df = 3**: Degrees of freedom for the test.
+-   **p-value = 0.6258**: Since the p-value is greater than 0.05, we fail to reject the null hypothesis. This indicates that the variances across the different oil types are equal.
+
+### Conclusion
+
+The Bartlett test results indicate that the variances of `Fat_absorbed` are homogeneous across the different `Oil_type` groups. This supports the assumption of homogeneity of variances required for the validity of the ANOVA model.
+
+## Multiple comparisons with Tukey
+
+This can only be done if there was a significant result in the anova
+
+```{r}
+TukeyHSD(chap3data1.model1,which="Oil_type")
+plot(TukeyHSD(chap3data1.model1,which="Oil_type"))
+```
+
+## General form for model building
+
+```{r}
+chap3data1.model2 <- lm(Fat_absorbed ~ Oil_type, data=chap3data1)
+summary(chap3data1.model2)
+Anova(chap3data1.model2, type="II")
+```
+
+## I.3- Randomised Block design (C&S chapter 10, p. 132)
+
+(See Biometry 721-821 workbook (2024) for the modelling)
+
+```{r}
+chap3data2.model1 <- lm(Yield ~ Block + Treatment, data=chap3data2)
+summary(chap3data2.model1)
+Anova(chap3data2.model1, type="II")
+#OR
+anova(chap3data2.model1)
+```
+
+### I.3.1 Detailed interpretation
+
+#### Block
+
+-   **Df**: 4
+-   **Sum Sq**: 49.84
+-   **Mean Sq**: 12.46
+-   **F value**: 2.3031
+-   **Pr(\>F)**: 0.10320
+
+**Interpretation**: The F-value for the blocks is 2.3031 with a p-value of 0.10320. Since the p-value is greater than 0.05, we fail to reject the null hypothesis for the block effect. This means that the blocks do not have a statistically significant effect on the yield at the 5% significance level.
+
+#### Treatment
+
+-   **Df**: 4
+-   **Sum Sq**: 83.84
+-   **Mean Sq**: 20.96
+-   **F value**: 3.8743
+-   **Pr(\>F)**: 0.02189
+
+**Interpretation**: The F-value for the treatment is 3.8743 with a p-value of 0.02189. Since the p-value is less than 0.05, we reject the null hypothesis for the treatment effect. This means that the treatments have a statistically significant effect on the yield at the 5% significance level.
+
+#### Residuals
+
+-   **Df**: 16
+-   **Sum Sq**: 86.56
+-   **Mean Sq**: 5.41
+
+**Interpretation**: The residuals represent the variation within the groups that is not explained by the blocks or treatments. This is the error term in the model.
+
+#### Conclusion
+
+-   **Block Effect**: The blocks do not significantly affect the yield, as indicated by a p-value of 0.10320, which is greater than the 0.05 significance level.
+-   **Treatment Effect**: The treatments significantly affect the yield, as indicated by a p-value of 0.02189, which is less than the 0.05 significance level.
+
+The asterisk (\*) next to the p-value for the treatment effect indicates statistical significance at the 5% level.
+
+N.B: For checking the assumptions, we followed the same procedure as before.
+
+## I.4- Latin Square design (C&S chapter 11, p. 149)
+
+(See Biometry 721-821 workbook (2024) for the modelling)
+
+```{r}
+chap3data3$Column <- as.factor(chap3data3$Column)
+chap3data3$Row <- as.factor(chap3data3$Row)
+
+chap3data3.model1 <- lm(Yield ~ Row + Column + Treatment, data=chap3data3)
+summary(chap3data3.model1)
+Anova(chap3data3.model1, type="II")
+```
+
+### I.4.1- Detailed interpretation
+
+#### Row
+
+-   **Df**: 3
+-   **Sum Sq**: 776.23
+-   **F value**: 2.5445
+-   **Pr(\>F)**: 0.15232
+
+**Interpretation**: The F-value for the row blocks is 2.5445 with a p-value of 0.15232. Since the p-value is greater than 0.05, we fail to reject the null hypothesis for the block effect. This means that the row blocks do not have a statistically significant effect on the yield at the 5% significance level.
+
+#### Column
+
+-   **Df**: 3
+-   **Sum Sq**: 134.31
+-   **F value**: 0.4403
+-   **Pr(\>F)**: 0.73264
+
+**Interpretation**: The F-value for the column blocks is 0.4403 with a p-value of 0.73264. Since the p-value is greater than 0.05, we fail to reject the null hypothesis for the block effect. This means that the column blocks do not have a statistically significant effect on the yield at the 5% significance level.
+
+#### Treatment
+
+-   **Df**: 3
+-   **Sum Sq**: 1489.57
+-   **F value**: 4.8829
+-   **Pr(\>F)**: 0.04743
+
+**Interpretation**: The F-value for the treatment is 4.8829 with a p-value of 0.04743. Since the p-value is less than 0.05, we reject the null hypothesis for the treatment effect. This means that the treatments have a statistically significant effect on the yield at the 5% significance level.
+
+#### Residuals
+
+-   **Df**: 6
+-   **Sum Sq**: 610.11
+
+**Interpretation**: The residuals represent the variation within the groups that is not explained by the row and column blocks or treatments. This is the error term in the model.
+
+#### Conclusion
+
+-   **Row block Effect**: The row blocks do not significantly affect the yield, as indicated by a p-value of 0.15232, which is greater than the 0.05 significance level.
+-   **Column block Effect**: The column blocks do not significantly affect the yield, as indicated by a p-value of 0.73264, which is greater than the 0.05 significance level.
+-   **Treatment Effect**: The treatments significantly affect the yield, as indicated by a p-value of 0.02189, which is less than the 0.05 significance level.
+
+The asterisk (\*) next to the p-value for the treatment effect indicates statistical significance at the 5% level.
+
+N.B: For checking the assumptions, we followed the same procedure as before.
+
+## I.5- Exercises
+
+Exercise 1
+
+With the data from C&S Table 9.4 (p. 107) (chap3exer1.csv), perform an ANOVA to test if the yields from the four wheat varieties differ. If so, follow up with multiple comparison tests to find which of the varieties differ from one another. Clearly state your conclusions and also check the assumptions of the linear model.
+
+Exercise 2
+
+Do C&S Exercise 10.1 (p. 147) (chap3exer2.csv). An experiment was carried out to compare the effects of three cultivation systems (A, B and C) with traditional seedbed preparation (D) on the total dry matter yield of kale. The trial was laid out in five randomised blocks. Plot yields in t/ha are provided in the csv file. Follow the same instructions as with Exercise 1.
+
+Exercise 3
+
+Do C&S Exercise 11.1 (p 157) (chap3exer3.csv). An experiment was designed to test the effects of five levels of phosphate fertiliser (P1, P2, P3, P4 and P5) on the yield of potato tuber dry matter. Yields (kg DM/plot) is presented in the csv file. Follow the same instructions as with Exercise 1.

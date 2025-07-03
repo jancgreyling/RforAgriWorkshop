@@ -1,0 +1,619 @@
+---
+title: "Presentation"
+author: "Guy"
+format: html
+include-in-header: 
+   - text: 
+       \usepackage{tabularx}
+       \usepackage[dvipsnames]{xcolor}
+editor: visual
+---
+
+# Day 1: Data handling and Descriptive statistics
+
+## 1. R coding refresher
+
+### 1.1 R Math
+
+Let's start with the fundamentals. To get acquainted with the R programming environment, begin with some basic computations. The R Console can also function as an interactive calculator.
+
+```{r}
+log(1) + sqrt(4)
+1/3 + exp(1)
+log(100, base = 10)
+4^2 + 2
+sum(4^2, 2)
+
+```
+
+The *ceiling()* function rounds a number upwards to its nearest integer, and the *floor()* function rounds a number downwards to its nearest integer, and returns the result:
+
+```{r}
+ceiling(1.4)
+floor(1.4) 
+```
+
+### 1.2 R comments
+
+You can use the comments before a line code
+
+```{r}
+#Print Good morning
+"Good morning"
+```
+
+You can use it at the end of the line code
+
+```{r}
+"Good morning" #Print Good morning
+```
+
+You can also use multiple line comments
+
+```{r}
+# What is the value of
+# square root of 3
+print(sqrt(3))
+```
+
+### 1.3 Variables
+
+To create variables in R you can do the following
+
+```{r}
+Surname <- "Alice"
+Age <- 12
+print(Surname)
+Age
+```
+
+To concatenate multiple words you can use the function *paste()*
+
+```{r}
+text1 <- "Alice is"
+text2 <- "beautiful"
+paste(text1, text2)
+```
+
+How to assign a real value to a variable?
+
+```{r}
+x <- 2
+y <- 3
+x+y
+```
+
+Can we concatenate a text with a numeric?
+
+```{r}
+paste("mum", 6)
+```
+
+Can we assign multiple variables to a same value?
+
+```{r}
+x <- y <- z <- 16
+x
+y
+z
+```
+
+### 1.4 R Data types
+
+The *class()* function can be used to check the data types of a variable
+
+```{r}
+a <- 5L
+class(a)
+
+b <- 5.5
+class(b)
+
+c <- 1 + 1i
+class(c)
+
+x <- "Hi everyone"
+class(x)
+
+y <- FALSE
+class(y)
+```
+
+Can we convert a from numeric to complex?
+
+```{r}
+x <- 2
+y <- as.complex(x)
+y
+class(y)
+```
+
+### 1.5 R string
+
+Can we count the number of characters in a string?
+
+```{r}
+str <- "Brilliant"
+nchar(str)
+```
+
+Can we check if a character or a sequence of characters are present in a string?
+
+```{r}
+str <- "Good Morning!"
+
+grepl("d", str)
+grepl("s", str)
+grepl("Good", str)
+
+```
+
+Can I write a text which contains word(s) in quotation marks?
+
+```{r}
+str <- "Have you heard the song \"Don't Stop Believing in yourself\"?"
+cat(str)
+```
+
+### 1.6 R Booleans
+
+When you compare two values, the expression is evaluated and R returns the logical answer(TRUE or False):
+
+```{r}
+x <- -1
+y <- 0
+x == y
+```
+
+### 1.6 The if statement
+
+An "if statement" is created using the `if` keyword and is utilized to define a block of code that executes when a condition evaluates to TRUE.
+
+```{r}
+x <- 15
+y <- 3
+
+if (x > y) {
+  print("x is greater than y")
+} 
+```
+
+### 1.7 Else If
+
+The `else if` keyword is R's way of saying "if the previous conditions were not true, then try this condition":
+
+```{r}
+a <- 10
+b <- 25
+
+if (b > a) {
+  print("b is greater than a")
+} else if (a == b) {
+  print ("a and b are equal")
+} 
+```
+
+### 1.8 If Else
+
+The `else` keyword catches anything which isn't caught by the preceding conditions:
+
+```{r}
+a <- 10
+b <- 15
+
+if (b > a) {
+  print("b is greater than a")
+} else if (a == b) {
+  print("a and b are equal")
+} else {
+  print("a is greater than b")
+} 
+```
+
+You can also use `else` without `else if`:
+
+```{r}
+a <- 213
+b <- 310
+
+if (b > a) {
+  print("b is greater than a")
+} else {
+  print("b is not greater than a")
+} 
+```
+
+### 1.9 R While Loops
+
+With the `while` loop we can execute a set of statements as long as a condition is TRUE. [Example]{style="color:red;"}: Print `i` as long as `i` is less than 6:
+
+```{r}
+i <- 1
+while (i < 6) {
+  print(i)
+  i <- i + 1
+} 
+```
+
+### 1.10 Break
+
+With the `break` statement, we can stop the loop even if the while condition is TRUE. [Example]{style="color:red;"}: Exit the loop if `i` is equal to 4.
+
+```{r}
+i <- 1
+while (i < 6) {
+  print(i)
+  i <- i + 1
+  if (i == 4) {
+    break
+  }
+} 
+```
+
+### 1.11 Next
+
+With the `next` statement, we can skip an iteration without terminating the loop. [Example]{style="color:red;"}: Skip the value of 3.
+
+```{r}
+i <- 0
+while (i < 6) {
+  i <- i + 1
+  if (i == 3) {
+    next
+  }
+  print(i)
+} 
+```
+
+### 1.12 R For Loop
+
+A `for` loop is used for iterating over a sequence.
+
+[Example1]{style="color:red;"}: Print the first 10 natural numbers.
+
+```{r}
+for (x in 0:9) {
+  print(x)
+} 
+```
+
+[Example2]{style="color:red;"}: Print every item in a list
+
+```{r}
+fruits <- list("apple", "banana", "cherry")
+
+for (x in fruits) {
+  print(x)
+}
+```
+
+[Example3]{style="color:red;"}: Print every item in a vector
+
+```{r}
+vec <- c(1, 2, 3, 4, 5, 6)
+
+for (x in vec) {
+  print(x)
+} 
+```
+
+### 1.13 R Functions
+
+#### 1.13.1 Creating a function
+
+To create a function, use the `function()` keyword:
+
+```{r}
+my_function <- function() {      # create a function with the name my_function
+  print("Hello World!")
+} 
+```
+
+#### 1.13.2 Call a Function
+
+To call a function, use the function name followed by parenthesis, like **my_function()**:
+
+```{r}
+my_function <- function() {
+  print("Hello World!")
+}
+
+my_function() # call the function named my_function 
+```
+
+#### 1.13.3 Arguments
+
+Information can be passed into functions as arguments.
+
+Arguments are specified after the function name, inside the parentheses. You can add as many arguments as you want, just separate them with a comma.
+
+The following example has a function with one argument (fname). When the function is called, we pass along a first name, which is used inside the function to print the full name:
+
+```{r}
+my_function <- function(fname) {
+  paste(fname, "Denis")
+}
+
+my_function("Lara")
+my_function("Kirsten")
+my_function("Frank") 
+```
+
+### 1.13.4 Number of Arguments
+
+By default, a function must be called with the correct number of arguments. Meaning that if your function expects 2 arguments, you have to call the function with 2 arguments, not more, and not less:
+
+```{r}
+my_function <- function(fname, lname) {
+  paste(fname, lname)
+}
+
+#my_function("Peter") 
+my_function("Kirsten", "Denis") 
+
+```
+
+#### 1.13.5 Return Values
+
+To let a function return a result, use the return() function:
+
+```{r}
+my_function <- function(x) {
+  return (3 * x)
+}
+print(my_function(5))
+```
+
+## 2. Descriptive Statistics
+
+### 2.1 Importing CSV file into R
+
+For importing data CSV file into R, we can use the following code. When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r}
+chap1data1 <-read.csv("chap1data1.csv", sep=",", header=T)
+```
+
+### 2.2 Visualize the data
+
+```{r}
+head(chap1data1)
+tail(chap1data1)
+```
+
+### 2.3 Categorical variables
+
+To prevent categorical variables from being treated as numerical data, we need to define them as factors.
+
+```{r}
+chap1data1$Male <- as.factor(chap1data1$Male)
+chap1data1$Married<- as.factor(chap1data1$Married)
+chap1data1$College <- as.factor(chap1data1$College)
+chap1data1$Distance <- as.factor(chap1data1$Distance)
+chap1data1$Treadmill <- as.factor(chap1data1$Treadmill)
+chap1data1$Shoes <- as.factor(chap1data1$Shoes) 
+```
+
+### 2.4 Installing and loading required packages
+
+To find out more of a specific package run the ??\[package name\]
+
+```{r}
+install.packages('RcmdrMisc')
+library(RcmdrMisc)
+```
+
+### 2.5 Summary statistics
+
+We can get summary statistics of a spesific variable, or all variables. The function numSummary can be used to get spesific statistics
+
+mean: measure of centrality sd: standard deviation measure of distribution skewness: measure of distribution and normality kurtosis: indication of form of frequency distribution
+
+```{r}
+summary(chap1data1)
+summary(chap1data1[,"Age"])
+sapply(chap1data1,summary)
+
+numSummary(chap1data1[,"Age"],statistics=c("mean","sd","skewness","kurtosis"))
+```
+
+### 2.6 Visualisation
+
+Below is a list of different type of graphs used according to a given data type:
+
+-   Bar chart (for categorical or discrete numerical data)
+-   Line plot (similar to a bar chart, used to emphasize discreteness of the variable)
+-   Histogram (for continuous data)
+-   Pie chart (for categorical data measured on a nominal scale)
+-   Scatter plot (to inspect the relationship between two variables)
+-   Box plot (to inspect the distribution of a numerical variable measured on a continuous scale)
+
+We will use two plotting systems in R in this presentation:
+
+1.  Base plotting
+2.  The ggplot system
+
+Let us start with plotting the aforementioned list of different type of graphs with the R base plot
+
+#### 2.6.1 Bars plot
+
+```{r}
+##Type of running
+barplot(table(chap1data1$Type.of.running),main="Type of Running",ylab="Frequency",xlab="Type of Running")
+#barplot(table(chap1data1[,"Type.of.running"]),main="Type of running",ylab="Frequency",xlab="Type of running",width=1,space=0)
+```
+
+#### 2.6.2 Line plot
+
+```{r}
+###Shoes
+#chap1data1[,"Shoes"]
+
+#plot(chap1data1[,"Shoes"],main="Type of Shoes",ylab="Frequency",xlab="Type of Shoes",col="red")
+barplot(table(chap1data1[,"Shoes"]),main="Type of Shoes",ylab="Frequency",xlab="Type of Shoes",col="green", width =1, space =100)
+```
+
+#### 2.6.4 Histogram
+
+```{r}
+##Age
+hist(chap1data1[,"Age"],main="Histogram for Age",xlab="Age")
+```
+
+#### 2.6.5 Pie chart
+
+```{r}
+###Type of running
+pie(table(chap1data1[,"Type.of.running"]),main="Pie chart for types of running")
+```
+
+#### 2.6.5 Scatterplot
+
+```{r}
+## Age and Miles.per.week 
+plot(x=chap1data1[,"Age"],y=chap1data1[,"Miles.per.week"], main="Age vs Miles per week",ylab="Miles per week",xlab="Age")
+```
+
+#### 2.6.6 Box plot
+
+```{r}
+## Miles.per.week
+boxplot(chap1data1[,"Miles.per.week"],main="Miles per week Boxplot",ylab="Miles per week",xlab="")
+```
+
+#### 2.6.7 Box plot by groups
+
+```{r}
+## Miles.per.week by Shoes
+boxplot(Miles.per.week~Shoes,data=chap1data1,main="Miles per week by Shoes Boxplot",ylab="Miles per week",xlab="Shoes")
+```
+
+To use the ggplot plotting system you need to install the package first and load it into R
+
+```{r}
+install.packages('ggplot2')
+library(ggplot2)
+
+#or do the following
+
+#In the miscellaneous window, click on Packages.
+#Click on Install, then type “ggplot2” beneath Packages (separate multiple with space or comma)
+#Make sure Install dependencies is selected, then click on Install
+#After installation, load the package into R: package(ggplot2)
+
+```
+
+Construct the same graphs (except the line plot) with ggplot plotting system.
+
+#### 2.6.8 Bar plot -- Shoes
+
+```{r}
+barplot <- ggplot(data=chap1data1,aes(x=Shoes)) +
+geom_bar(fill="gray",color="black",width=.5)
+barplot + ggtitle("Barplot of Types of Shoes") + labs(x="Types of
+Shoes",y="Frequency") +
+theme(plot.title=element_text(size=20),axis.title=element_text(size=
+14))
+```
+
+### 2.6.9 Bar plot by groups -- Shoes by Male
+
+```{r}
+barplot2 <- ggplot(data=chap1data1,aes(x=Shoes,y=Miles.per.week))
+barplot2 + geom_bar(aes(fill=Male),
+position=position_dodge(),stat="identity") +
+scale_fill_manual(values=c("#CC6666","#66CC99"))
+```
+
+#### 2.6.10 Histogram -- Age
+
+```{r}
+histo <- ggplot(chap1data1,aes(x=Age))
+histo + geom_histogram(binwidth=6)
+```
+
+#### 2.6.11 Pie chart -- Shoes
+
+```{r}
+pie <- ggplot(data=chap1data1,aes(x=factor(1),fill=Shoes))+
+geom_bar(width = 1)
+pie + coord_polar("y")
+```
+
+#### 2.6.12 Scatter plot -- Runs.per.week vs Age
+
+```{r}
+ggplot(data=chap1data1,aes(y=Runs.per.week,x=Age)) +
+geom_point(shape=3,color="darkblue")
+```
+
+#### 2.6.13 Scatter plot -- Runs.per.week vs Age by Distance
+
+```{r}
+scatter <-
+ggplot(data=chap1data1,aes(y=Runs.per.week,x=Age,color=Distance))
+scatter + geom_point(size=2) +
+scale_color_manual(values=c("#CC6666","#66CC99"))
+```
+
+#### 2.6.14 Scatter plot -- Runs.per.week vs Age by Distance (with trend lines)
+
+```{r}
+scatter2 <-
+ggplot(data=chap1data1,aes(y=Runs.per.week,x=Age,color=Distance))
+scatter2 + geom_point(size=2) +
+scale_color_manual(values=c("#CC6666","#66CC99")) +
+geom_smooth(method=lm,se=F)
+```
+
+#### 2.6.15 Box plot -- Miles.per.week by Distance
+
+```{r}
+ggplot(chap1data1,aes(factor(Distance),Miles.per.week)) +
+geom_boxplot()
+```
+
+#### 2.6.15 Exercises
+
+##### Exercise 1
+
+For the data in C&S Example 2.1 (p. 11) (chap1exer1.csv), calculate the following statistics regarding the sample plant height.
+
+-   Mean
+-   Median
+-   Variance
+-   Standard deviation
+-   Standard error of the mean
+-   Coefficient of variation
+
+You can also try to import the data with the following function: "matrix(c(14.8,15.2,17.4,11.6,12.5),ncol=1)"
+
+##### Exercise 2
+
+See if you can import the data below with the following function: data.frame(Yield=c(8.1,8.7,9.2,7.8,8.4,9.4))
+
+-   Report the mean, median and mode.
+-   Report the variance and standard deviation.
+-   Produce a line plot.
+
+#### Exercise 3
+
+The data in C&S Example 3.2 (p. 18) (chap1exer3.csv), presents the yields (g) of small equal-sized plots of barley. Determine the following:
+
+-   mean
+
+-   mimimum and maximum
+
+-   standard deviation
+
+-   range
+
+-   first and third quartiles
+
+-   interquartile range and also
+
+-   produce a histogram
+
+-   produce a box plot.
+
+
