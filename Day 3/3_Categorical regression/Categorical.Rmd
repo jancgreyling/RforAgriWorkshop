@@ -9,17 +9,18 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-#Required pacakges 
+# Required pacakges
 
 ```{r}
-install.packages("ROCR")
 library(RcmdrMisc)
 library(ggplot2)
 library(ROCR)
+library(car)
 ```
 
-#Functions 
-##the allSubsets() function
+# Functions
+
+# the allSubsets() function
 
 ```{r}
 allSubsets.LogistReg <- function(data,y.name="Y",perf.measure=c("AIC","BIC")){
@@ -65,7 +66,7 @@ allSubsets.LogistReg <- function(data,y.name="Y",perf.measure=c("AIC","BIC")){
 }
 ```
 
-#Calculate the gini coefficient for a binary classifier
+# Calculate the gini coefficient for a binary classifier
 
 ```{r}
 
@@ -83,7 +84,8 @@ calcGini <- function(model,Y){
 }
 
 ```
-#ROC Curve 
+
+# ROC Curve
 
 ```{r}
 performance <- function(prediction.obj, measure,
@@ -1778,179 +1780,248 @@ ROC.curve.test<-function(model, testSet, response,plotTitle="ROC Curve"){
 
 ```
 
-##Interactively show graphs in lectures
-
-```{r}
-install.packages("manipulate")
-library(manipulate)
-
-
-
-#Logistic regression
-
-x <- seq(-10,10,len=1000)
-
-manipulate(
-  
-  plot(x,exp(beta0+beta1*x) / (1+exp(beta0+beta1*x)),
-       type="l",lwd=3,frame=FALSE,ylim=c(0,1)),
-  beta1 = slider(-2,2,step=.1,initial=2),
-  beta0 = slider(-2,2,step=.1,initial=0)
-  
-)
-
-
-#Simple linear regression
-
-
-x <- seq(-10,10,len=100)
-
-manipulate(
-  plot(x=x,y=beta0+beta1*x, xlim = c(-15, 15), type = "l", ylim=c(-20,20)),
-  beta1 = slider(-5,5,step=0.5,initial=2),
-  beta0 = slider(-10,10,step=1,initial=-1)
- 
- )
-
-
-```
-
-
-#Create data.frame for colour blind example
+# Example 0
 
 ```{r}
 chap10data.cb <- matrix(c(45,126,30,212),byrow=T,nrow=2,ncol=2)
 colnames(chap10data.cb) <- c("Colour.Blind","Not.colour.blind")
 rownames(chap10data.cb) <- c("Male","Female")
+chap10data.cb
 ```
 
-#Test for an association
+# Test for an association
 
 ```{r}
+#is there an association between gender colour blindness?
+#H0: No association between gender and colour blindness (i.e., independant)
+#H1: There is an association between gender and colour blindness (i.e., dependant)
 chisq.test(chap10data.cb)
 ```
 
-#Example 1
+# Example 1
+
+This is the famous "Lady Tasting Tea" experiment by R.A. Fisher. A lady claims she can tell whether milk or tea was poured first. There are 8 cups: 4 poured milk first and 4 tea first, randomly ordered. She guesses which were which.
 
 ```{r}
+chap10data1 <- read.csv("chap10data1.csv")
+dim(chap10data1)
+head(chap10data1)
 chap10.data1.table1 <- xtabs(~Poured+Guess, data=chap10data1)
+chap10.data1.table1
+
 chisq.test(chap10.data1.table1, correct=FALSE)
 chisq.test(chap10.data1.table1, correct=FALSE)$expected 
+
+```
+
+The expected counts are small (only 2 per cell), so the Chi-squared approximation is unreliable. #This test assumes large samples — not valid here. Chi-squared tests work best when expected counts ≥ 5, so it's not ideal here.
+
+Use a fisher test instead
+
+```{r}
 fisher.test(chap10.data1.table1)
 ```
 
+The p-value is not statistically significant, so we fail to reject the null hypothesis. That means: we don’t have enough evidence to say the lady could actually tell the difference beyond chance.
 
-#Example 2
+# Example 2
+
+Let's look at different water-related activities (Boardrider, Diver, Swimmer) across three provinces in South Africa (Eastern Cape, Natal, Western Cape)
 
 ```{r}
+chap10data2 <- read.csv("chap10data2.csv")
+dim(chap10data2)
 chap10.data2.table1 <- xtabs(~Activity+Province, data=chap10data2)
+chap10.data2.table1
+
+# H0: There is no association between water-related activity and province
+# H1: There is an association between water-related activity and province
 chisq.test(chap10.data2.table1, correct=FALSE)
 chisq.test(chap10.data2.table1, correct=FALSE)$expected
-fisher.test(chap10.data2.table1)
-
 ```
 
-#Example 3
-#fit logistic regression model
+The very small p-value suggests to strongly rejects the null hypothesis of independence between activity type and province. There is a statistically significant association between the type of water activity and the province — the distribution of activities is not uniform across regions. A warning occurs because some expected values are low (e.g., less than 5), making the chi-squared approximation unreliable.
+
+Use a Fisher's test, because Fisher's test is valid for small samples
 
 ```{r}
+fisher.test(chap10.data2.table1)
+```
+
+The very small p-value confirms a very strong association between activity and province, without relying on large-sample assumptions. So, regardless of test, there's compelling statistical evidence that activity patterns differ significantly by province.
+
+# Example 3 
+
+## Fitting a logistic regression model
+
+```{r}
+chap10data3 <- read.csv("chap10data3.csv")
+dim(chap10data3)
+head(chap10data3)
+chap10data3$Died <- factor(chap10data3$Died, 
+                           levels = c("No", "Yes"), 
+                           labels = c(0, 1))
 chap10data3.model1 <- glm(Died ~ Birthweight, family=binomial(), data=chap10data3)
 summary(chap10data3.model1)
 ```
 
-#visualise the fitted values (probabilities)
+### Interpretation
+
+**Intercept (-0.030)**:\
+When Birthweight = 0, the log-odds of death is -0.030. This is not meaningful in practice (since no birthweight is 0), so we focus more on the slope.
+
+**Birthweight (-0.00172)**:\
+A **one-unit increase** in birthweight (probably in grams or kg depending on your dataset) is associated with a **decrease in the log-odds of death** by 0.00172.
+
+Since the coefficient is **negative and highly significant (p \< 0.001)**, we conclude that higher birthweight is significantly associated with a lower probability of death.
+
+## Visualise the fitted values (probabilities)
 
 ```{r}
 plot(chap10data3$Birthweight,chap10data3.model1$fitted,pch=19,col="red",xlab="Birth weight (in g)",ylab="Probability of Death")
 ```
 
-#odds ratios for estimates
+## Odds ratios for estimates
 
 ```{r}
 exp(chap10data3.model1$coefficients)
 exp(confint(chap10data3.model1))
 ```
 
-#goodness-of-fit
+Interpretation: For **each one-unit increase in birthweight**, the **odds of death decrease by a factor of 0.998**. Because the OR is slightly less than 1, **higher birthweight is associated with slightly lower odds of death**.
+
+We are 95% confident that each unit increase in birthweight is associated with a **0.14% - 0.2% decrease in odds of death**. The entire interval is below 1, which is a **statistically significant**
+
+## Goodness-of-fit
 
 ```{r}
 anova(chap10data3.model1,test="Chisq")
 ```
 
-#evaluate the performance of the model - ROC curve
+**Deviance** is a measure of model fit; lower is better.
+
+The **null model** includes no predictors (intercept only). Its deviance is **926.40**.
+
+Adding `Birthweight` reduces the deviance to **773.73**, a drop of **152.68**.
+
+This drop in deviance is tested using a **Chi-squared test**, and the result is **highly significant** (p \< 2.2e-16).
+
+**Birthweight is a statistically significant predictor of death.** The model including birthweight fits the data **significantly better** than the null model (no predictors). The very small p-value indicates that this improvement is **not due to chance**.
+
+## Confusion matrix
+
+```{r}
+# predict probability
+chap10data3$probs <- predict(chap10data3.model1,type="response")
+ggplot(chap10data3, aes(x = probs, fill = Died)) +
+ geom_histogram()
+
+# based on predicted survival probability, 
+# predict outcome according to cut-off threshold 
+chap10data3$preds <- ifelse(chap10data3$probs>=0.3,"Yes","No")
+
+# confusion matrix
+cm1 <- table(chap10data3[,c("Died","preds")])
+cm1
+
+#Sensitivity
+cm1[2, 2] / sum(cm1[2, ])
+
+#Specificity
+cm1[1, 1] / sum(cm1[1, ])
+
+#Accuracy
+sum(diag(cm1)) / sum(cm1)
+
+# how about another threshold??
+chap10data3$preds2 <- ifelse(chap10data3$probs>=0.05,"Yes","No")
+
+cm2 <- table(chap10data3[,c("Died","preds2")])
+cm2
+
+#Sensitivity
+cm2[2, 2] / sum(cm2[2, ])
+
+#Specificity
+cm2[1, 1] / sum(cm2[1, ])
+
+#Accuracy
+sum(diag(cm2)) / sum(cm2)
+```
+
+## Evaluate the performance of the model - ROC curve
 
 ```{r}
 ROC.curve(chap10data3.model1,response=chap10data3$Died)
 ```
 
-#evaluate the performance of the model - gini coefficient
+## Evaluate the performance of the model - gini coefficient
+
+The **Gini coefficient** to evaluates the discriminatory power of a logistic regression model, in this case: predicting death from birthweight.
 
 ```{r}
 chap10data3.model1.pr <- predict(chap10data3.model1,type="response",chap10data3.model1$data)
+
 chap10data3.model1.auc <- performance(prediction(chap10data3.model1.pr, chap10data3$Died), "auc")
+
 chap10data3.model1.gini <- abs(1-2*attr(chap10data3.model1.auc,'y.values')[[1]])
-
+chap10data3.model1.gini
 ```
 
-#diagnostic procedures
+#### Interpretation
+
+**Gini = 0** → no discriminatory power (like random guessing)
+
+**Gini = 1** → perfect discrimination
+
+**Gini \> 0.4** is typically considered **acceptable**
+
+**Gini \> 0.6–0.7** is **strong**
+
+# Example 4 
+
+## Visualise data
 
 ```{r}
-influence.measures(chap10data3.model1)
-influence.cutoffs(chap10data3.model1)
-```
+chap10data4 <- read.csv("chap10data4.csv")
+chap10data4$Died <- factor(chap10data4$Died, levels = c("No", "Yes"), labels = c(0, 1))
+ggplot(chap10data4, aes(x = Apgar_score, y = Birthweight, colour = Died)) +
+ geom_jitter() +
+ theme_classic()
 
-#confusion matrix
-
-```{r}
-chap10data3$probs <-predict(chap10data3.model1,type="response")
-chap10data3$preds <- ifelse(chap10data3$probs>=0.2,"Yes","No")
-table(chap10data3[,c("Died","preds")])
-
-```
-
-
-#Example 4
-#Visualise data
-
-```{r}
-plot(y=chap10data4[chap10data4$Died=="No",]$Birthweight,
-     x=chap10data4[chap10data4$Died=="No",]$Apgar.score,col="blue",ylab="Weight",xlab="Apgar")
-points(y=chap10data4[chap10data4$Died=="Yes",]$Birthweight,
-     x=chap10data4[chap10data4$Died=="Yes",]$Apgar.score,col="red")
-
-scatterplotMatrix(~Birthweight + Apgar.score + Temperature,data=chap10data4,
+car::scatterplotMatrix(~Birthweight + Apgar_score + Temperature,data=chap10data4,
                   groups=chap10data4$Died,
-                  main="ScatterPlot Matrix of Chapter 4 Dataset 4")
+                  main="ScatterPlot Matrix of Chapter 4 Dataset 4") |> suppressWarnings()
 ```
 
-#fit logistic regression model
+## Fit logistic regression model
 
 ```{r}
 chap10data4.model1 <- glm(Died ~ ., family=binomial(), data=chap10data4)
 summary(chap10data4.model1)
 ```
 
-#assess multicollinearity
+## Assess multicollinearity
 
 ```{r}
 vif(chap10data4.model1)
 ```
 
-#variable selection
+## Variable selection
 
 ```{r}
 stepwise(chap10data4.model1,direction="backward/forward",criterion="AIC")
 allSubsets.LogistReg(chap10data4,y.name="Died",perf.measure="AIC")
 ```
 
-#fit the final model
+## Fit the final model
 
 ```{r}
-chap10data4.model2 <- glm(Died ~ Delivery.mode+Birthweight+Apgar.score, family=binomial(), data=chap10data4)
+chap10data4.model2 <- glm(Died ~ Delivery_mode+Birthweight+Apgar_score, family=binomial(), data=chap10data4)
 summary(chap10data4.model2)
 ```
 
-#Assess the final model
+## Assess the final model
 
 ```{r}
 ROC.curve(chap10data4.model2,response=chap10data4$Died)
@@ -1961,9 +2032,8 @@ table(chap10data4$Preds,chap10data4$Died)
 mean(chap10data4$Preds!=chap10data4$Died)
 ```
 
-#predicting with the final model
+## Predicting with the final model
 
 ```{r}
-predict(chap10data4.model2,newdata=data.frame(Delivery.mode="Caesarean",Birthweight=1000,Apgar.score=6),type="response")
+predict(chap10data4.model2,newdata=data.frame(Delivery_mode="Caesarean",Birthweight=1000,Apgar_score=6),type="response")
 ```
-

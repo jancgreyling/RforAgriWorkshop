@@ -1,6 +1,6 @@
 ---
 title: "SLR"
-format: html
+format: pdf
 editor: visual
 ---
 
@@ -21,9 +21,12 @@ library(ggplot2)
 
 ```{r}
 chap6data1 <- read.csv("chap6data1.csv", sep=",", header=T)
+dim(chap6data1)
+head(chap6data1)
+
 chap6data2 <- read.csv("chap6data2.csv", sep=",", header=T)
-View(chap6data1)
-View(chap6data2)
+dim(chap6data2)
+head(chap6data2)
 ```
 
 #Example 1 #visual presentation of data
@@ -39,7 +42,6 @@ chap6data1.plot1 + geom_point(size=2)+ geom_smooth(method=lm,se=F)
 ```{r}
 chap6data1.model1 <- lm(MetabolicRate~BodyWeight,data=chap6data1)
 summary(chap6data1.model1)
-anova(chap6data1.model1)
 ```
 
 The formula of the fitted model is
@@ -71,8 +73,7 @@ Since Multiple R-squared($R^{2}$) is equal to $0.5539$, then approximately $55.3
 To assess the influence of individual data points on the linear regression model `chap6data1.model1`, we use influence measures and studentized residuals.
 
 ```{r}
-influence.measures(chap6data1.model1)
-matrix(rstudent(chap6data1.model1),ncol=1) #Studentized Residuals
+influence.measures(chap6data1.model1)$infmat[1:6, ]
 ```
 
 #### Influence Measures
@@ -93,6 +94,16 @@ The `influence.measures()` function in R provides a comprehensive set of influen
 -   **Cook's Distance**: Values larger than 1 indicate highly influential observations.
 -   **Hat values (Leverage)**: Values larger than $\frac{2k}{n}$ suggest high leverage points.
 
+##### **Important Considerations:**
+
+-   **Context Matters:** Cutoff values are guidelines, and the appropriate cutoff can vary depending on the specific dataset and research question.
+
+-   **Don't Automatically Remove:** Don't remove influential points solely based on these diagnostics. Investigate why they are influential and whether they represent genuine data points or potential errors.
+
+-   **Consider Alternatives:** If influential points are problematic, consider using robust regression techniques or transforming the data.
+
+-   **Report Findings:** Always report any influential points identified in your analysis. 
+
 #### Studentized Residuals
 
 Studentized residuals are residuals divided by an estimate of their standard deviation. They help identify outliers and are calculated as: $$r_{i} = \frac{\epsilon_{i}}{s(\epsilon_{i})}$$, where where $\epsilon_{i}$ is the residual for observation $i$ and $s(\epsilon_{i})$ is its standard deviation.
@@ -101,9 +112,16 @@ Studentized residuals are residuals divided by an estimate of their standard dev
 
 If $\vert r_{i} \vert > 2$, then there is potential outliers.
 
-
+```{r}
+head(
+ matrix(
+  rstudent(chap6data1.model1),
+  ncol=1)
+ ) #Studentized Residuals
+```
 
 Use the following code to add the diagnostic measures and the fitted values to the original data set.
+
 ```{r}
 within(chap6data1, {
 FittedValues <- fitted(chap6data1.model1)
@@ -112,12 +130,12 @@ FittedValues <- fitted(chap6data1.model1)
   HatValues <- hatvalues(chap6data1.model1)
   CooksDistance <- cooks.distance(chap6data1.model1)
   ObsNumber <- 1:nrow(chap6data1)
-})
+}) |> head()
 
-#head(chap6data1)
 ```
 
-### Creating Influence.Cutoffs function 
+### Creating Influence.Cutoffs function
+
 ```{r}
 influence.cutoffs <- function(model){
   p <- length(model$coefficients)
@@ -130,53 +148,57 @@ influence.cutoffs <- function(model){
   cook.D <- 4/n
   HATDIAG <- 2*p/n
   
-  list(DFBETAS=DFBETAS,DFFITS=DFFITS,COVRATIO.lwr=COVRATIO.lwr,COVRATIO.upr=COVRATIO.upr,cook.D=cook.D,HATDIAG=HATDIAG)
+  list(DFBETAS=DFBETAS,DFFITS=DFFITS,COVRATIO.lwr=COVRATIO.lwr,
+       COVRATIO.upr=COVRATIO.upr,cook.D=cook.D,HATDIAG=HATDIAG)
 }
 
 influence.cutoffs(chap6data1.model1)
 ```
 
 #Assess assumptions: normality and homoscedasticity
+
+```{r}
+shapiro.test(chap6data1.model1$residuals)
+```
+
+Since **p \> 0.05**, you **fail to reject the null hypothesis**. That means there is **no strong evidence** that the residuals deviate from normality. So, **normality assumption holds** reasonably well for your model.
+
 ```{r}
 par(mfrow=c(2,2))
 base::plot(chap6data1.model1)
 par(mfrow=c(1,1))
-shapiro.test(chap6data1.model1$residuals)
 ```
 
 ### Prediction
+
 ```{r}
 chap6data1.pred <- data.frame(BodyWeight=c(70,100))
 predict(chap6data1.model1,newdata=chap6data1.pred,interval="confidence")
 predict(chap6data1.model1,newdata=chap6data1.pred,interval="prediction")
-chap6data1.pred2 <- cbind(chap6data1.pred,predict(chap6data1.model1,newdata=chap6data1.pred,interval="confidence"))
 
-chap6data1.predictions <- cbind(chap6data1,predict(chap6data1.model1,newdata=chap6data1.pred, interval="prediction"))
-print(chap6data1.predictions)
-g <- ggplot(chap6data1.predictions,aes(x=BodyWeight,y=MetabolicRate)) + geom_point() + geom_line(aes(y = fit),colour = "blue", size = 1) + stat_smooth(method=lm) + geom_ribbon(aes(ymin = lwr, ymax = upr),  fill = "blue", alpha = 0.4)
-g + geom_point(data=chap6data1.pred2,aes(x=BodyWeight,y=fit),col="red")
+chap6data1.predictions <- cbind(chap6data1,
+                                predict(chap6data1.model1, 
+                                        newdata=chap6data1, 
+                                        interval="prediction")
+                                )
+head(chap6data1.predictions)
+ggplot(chap6data1.predictions,aes(x=BodyWeight,y=MetabolicRate)) + 
+ geom_point() + 
+ geom_line(aes(y = fit),colour = "blue", size = 1) + 
+ geom_ribbon(aes(ymin = lwr, ymax = upr),  fill = "blue", alpha = 0.4)
 
 ```
-
 
 # IV- Exercises
 
 Exercise 1
 
-With the data from C&S Example 7.1, p. 64 (chap6exer1.csv): Perform a simple linear regression of
-Area (𝑌) on Stem length (𝑋) and give the equation of the best-fitting regression line, as well as the
-coefficient of determination (𝑅2 ). Interpret the 𝑅2 value. Also test the assumptions underlying this
-regression model, and clearly state your conclusions with regard to the validity of the fitted model.
-
+With the data from C&S Example 7.1, p. 64 (chap6exer1.csv): Perform a simple linear regression of Area ($𝑌$ ) on Stem length ($𝑋$ ) and give the equation of the best-fitting regression line, as well as the coefficient of determination ($𝑅2$). Interpret the $𝑅2$ value. Also test the assumptions underlying this regression model, and clearly state your conclusions with regard to the validity of the fitted model.
 
 Exercise 2
 
-With the data from C&S Example 7.2, p. 69 (chap6exer2.csv): Perform a simple linear regression of
-wheat yield (𝑌) on nitrogen fertilizer (𝑋) and give the equation of the best-fitting regression line. Predict the wheat yield for a nitrogen fertilizer level of 𝑋 = 80kg nitrogen per hectare (also include the confidence and prediction intervals in your answer, and clearly interpret).
+With the data from C&S Example 7.2, p. 69 (chap6exer2.csv): Perform a simple linear regression of wheat yield ($𝑌$) on nitrogen fertilizer ($𝑋$ ) and give the equation of the best-fitting regression line. Predict the wheat yield for a nitrogen fertilizer level of $𝑋$ = 80kg nitrogen per hectare (also include the confidence and prediction intervals in your answer, and clearly interpret).
 
 Exercise 3
 
-Do C&S Exercise 7.2 (p. 84). The data is in the file chap6exer3.csv. A study was undertaken to find
-out if tree diameter measurements 1.5m above ground level can be used to predict heights for a certain
-species. The measurements of 12 trees are shown in the csv file. Complete a thorough regression
-analysis (significance, R-squared, assumptions).
+Do C&S Exercise 7.2 (p. 84). The data is in the file chap6exer3.csv. A study was undertaken to find out if tree diameter measurements 1.5m above ground level can be used to predict heights for a certain species. The measurements of 12 trees are shown in the csv file. Complete a thorough regression analysis (significance, R-squared, assumptions).

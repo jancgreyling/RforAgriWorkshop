@@ -1,0 +1,184 @@
+---
+title: "Repeated measure"
+author: "Guy"
+format: pdf
+editor: visual
+---
+
+# Load required packages
+
+```{r}
+library(RcmdrMisc)
+library(ggplot2)
+library(nlme)
+library(emmeans)
+```
+
+## Importing data
+
+```{r}
+chap9data1 <- read.csv("chap9data1.csv", sep=",", header=T)
+View(chap9data1)
+```
+
+Let us do the example in chapter 9 ("Biometry 721/821 Workbook(2024).pdf") #Example 1
+
+```{r}
+chap9data1$Food <- as.factor(chap9data1$Food)
+chap9data1$Calf <- as.factor(chap9data1$Calf)
+chap9data1$Month <- as.factor(chap9data1$Month)
+```
+
+#fit model
+
+```{r}
+chap9data1.model1 <- lme(Weight~Month*Food,random=~1|Calf,data=chap9data1)
+anova(chap9data1.model1)
+
+chap9data1.model2 <- aov(Weight~Food*Month + Error(Calf),data=chap9data1)
+summary(chap9data1.model2)
+```
+
+## Interpretation of the ANOVA Results
+
+The analysis of variance (ANOVA) was conducted using a linear mixed-effects model (`lme`) to understand the effects of `Month`, `Food`, and their interaction (`Month:Food`) on the `Weight` of calves. Here is the interpretation of the ANOVA table generated:
+
+### 1. Intercept:
+
+-   **F-value:** 465.2000\
+-   **p-value:** `<.0001`\
+-   This indicates that the intercept is highly significant. In mixed-effects models, the intercept represents the baseline level of the dependent variable (`Weight`) when all predictors are at their reference level. A highly significant intercept suggests that the mean `Weight` of the calves is significantly different from zero.
+
+### 2. Month:
+
+-   **Degrees of Freedom (numDF):** 3\
+-   **F-value:** 15.6277\
+-   **p-value:** `<.0001`\
+-   The variable `Month` has a highly significant effect on `Weight` (p-value \< 0.0001). This suggests that the average `Weight` of the calves changes significantly across different months.
+
+### 3. Food:
+
+-   **Degrees of Freedom (numDF):** 1\
+-   **F-value:** 1.4088\
+-   **p-value:** 0.2693\
+-   The variable `Food` does not have a statistically significant effect on `Weight` (p-value = 0.2693). This indicates that, after accounting for other variables in the model, different types of food do not significantly affect the calves' weight.
+
+### 4. Interaction Between Month and Food (Month:Food):
+
+-   **Degrees of Freedom (numDF):** 3\
+-   **F-value:** 0.8711\
+-   **p-value:** 0.4697\
+-   The interaction between `Month` and `Food` is not statistically significant (p-value = 0.4697). This suggests that the effect of `Food` on `Weight` does not vary significantly across different months.
+
+## Conclusion:
+
+-   The results indicate that the calves' weight varies significantly over the months (`Month` is significant), but there is no significant effect of `Food` or the interaction between `Month` and `Food` on the weight. Therefore, month-to-month changes are the main driver of differences in weight, rather than the type of food or any combined effect of the month and food type. """
+
+## Interpretation of the ANOVA Summary
+
+The analysis of variance (ANOVA) was conducted using the `aov` function with an `Error` term for the random effect of `Calf`. This model evaluates the effects of `Food`, `Month`, and their interaction (`Food:Month`) on the `Weight` of calves while accounting for the random effect of `Calf`. Here is the interpretation of the ANOVA summary:
+
+### 1. Error: Calf (Random Effect)
+
+-   This section represents the variance attributed to differences between calves (treated as a random effect).
+-   **Food:**
+    -   **Degrees of Freedom (Df):** 1\
+    -   **Sum of Squares (Sum Sq):** 409.6\
+    -   **Mean Square (Mean Sq):** 409.6\
+    -   **F-value:** 1.409\
+    -   **p-value (Pr(\>F)):** 0.269\
+    -   The effect of `Food` is not statistically significant (p-value = 0.269). This suggests that differences in the type of food do not significantly contribute to variations in weight among different calves.
+
+### 2. Error: Within (Within-Groups Effects)
+
+-   This section shows the variance explained by the fixed effects (`Month` and `Food:Month`) within the groups (calves).
+-   **Month:**
+    -   **Degrees of Freedom (Df):** 3\
+    -   **Sum of Squares (Sum Sq):** 1036.9\
+    -   **Mean Square (Mean Sq):** 345.6\
+    -   **F-value:** 15.628\
+    -   **p-value (Pr(\>F)):** 7.58e-06 (very significant, denoted by \*\*\*)\
+    -   The effect of `Month` on `Weight` is highly significant (p-value \< 0.0001). This indicates that the weight of calves changes significantly across different months.
+-   **Food:Month Interaction:**
+    -   **Degrees of Freedom (Df):** 3\
+    -   **Sum of Squares (Sum Sq):** 57.8\
+    -   **Mean Square (Mean Sq):** 19.3\
+    -   **F-value:** 0.871\
+    -   **p-value (Pr(\>F)):** 0.47\
+    -   The interaction between `Food` and `Month` is not statistically significant (p-value = 0.47). This suggests that the effect of `Food` on `Weight` does not vary significantly over different months.
+
+### 3. Residuals
+
+-   Represents the unexplained variance within the groups after accounting for the fixed effects (`Month` and `Food:Month`).
+-   **Degrees of Freedom (Df):** 24\
+-   **Sum of Squares (Sum Sq):** 530.8\
+-   **Mean Square (Mean Sq):** 22.1
+
+## Conclusion
+
+-   The weight of calves varies significantly across different months, indicating a strong effect of `Month`.
+-   There is no significant effect of `Food` alone or the interaction between `Food` and `Month` on the weight of calves.
+-   The differences between individual calves (random effect of `Calf`) and other unexplained factors account for the remaining variance.
+
+#Multiple comparisons
+
+```{r}
+# Calculate estimated marginal means for the model
+emmeans_result <- emmeans(chap9data1.model1, ~ Month)
+
+# Display the estimated marginal means
+summary(emmeans_result)
+
+# Conduct pairwise comparisons
+pairs(emmeans_result)
+
+```
+
+## Interpretation of Estimated Marginal Means and Pairwise Comparisons
+
+The analysis gives the estimated marginal means (EMMs) for different months and the pairwise comparisons between these months. Here is the interpretation:
+
+### 1. Estimated Marginal Means (EMMs) for `Month`
+
+-   The table provides the estimated marginal means (`emmeans`) for each month along with their standard errors (`SE`), degrees of freedom (`df`), and confidence intervals (`lower.CL` and `upper.CL`).
+-   These EMMs represent the average weight for each month, adjusted for the levels of `Food`.
+
+#### Example Values:
+
+-   **Month 3:** Estimated mean weight is 50.7 with a 95% confidence interval from 43.8 to 57.6.
+-   **Month 4:** Estimated mean weight is 57.2 with a 95% confidence interval from 50.3 to 64.1.
+-   **Month 5:** Estimated mean weight is 59.9 with a 95% confidence interval from 53.0 to 66.8.
+-   **Month 6:** Estimated mean weight is 64.8 with a 95% confidence interval from 57.9 to 71.7.
+
+**Note:** There is a warning that results may be misleading due to involvement in interactions, so interpretation should consider the presence of significant interactions in the model.
+
+### 2. Pairwise Comparisons Between Months
+
+-   Pairwise comparisons were performed between the different months to evaluate if there are significant differences in mean weights.
+
+#### Contrast Estimates:
+
+-   **Month 3 vs. Month 4:** Difference in means is -6.5 (Month 3 lower), with a p-value of 0.0241 (significant).
+-   **Month 3 vs. Month 5:** Difference in means is -9.2 (Month 3 lower), with a p-value of 0.0011 (highly significant).
+-   **Month 3 vs. Month 6:** Difference in means is -14.1 (Month 3 lower), with a p-value \< 0.0001 (very highly significant).
+-   **Month 4 vs. Month 5:** Difference in means is -2.7 (Month 4 lower), with a p-value of 0.5817 (not significant).
+-   **Month 4 vs. Month 6:** Difference in means is -7.6 (Month 4 lower), with a p-value of 0.0071 (significant).
+-   **Month 5 vs. Month 6:** Difference in means is -4.9 (Month 5 lower), with a p-value of 0.1192 (not significant).
+
+### Conclusion from Pairwise Comparisons:
+
+-   Significant differences in weight exist between several months, particularly between Month 3 and the other months (4, 5, and 6), indicating that weights vary significantly as time progresses.
+
+### 3. P-Value Adjustment
+
+-   The p-values are adjusted using the Tukey method for multiple comparisons, ensuring that the family-wise error rate is controlled.
+
+## Conclusion
+
+-   The estimated marginal means reveal a general increase in weight from Month 3 to Month 6.
+-   Significant differences exist between several months, particularly Month 3 versus later months, suggesting time-related effects on weight.
+-   Results should be interpreted cautiously, considering potential interaction effects between `Month` and other variables such as `Food`.
+
+# Exercises
+
+Do all the exercices in page 66 on document "Biometry 721/821 Workbook(2024).pdf"

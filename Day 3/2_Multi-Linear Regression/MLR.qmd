@@ -1,8 +1,36 @@
 ---
-title: "MLR"
-format: html
+title: "Multiple linear regression"
+format: pdf
 editor: visual
 ---
+
+# Introduction
+
+In multiple linear regression, we have a dependent variable $𝑌$ which we would like to explain in terms of the multiple independent variables $𝑋_1$, $𝑋_2$, …, $𝑋_𝑞$ simultaneously.
+
+![Figure 1: A multiple regression model (with two explanatory variables) represented as a hyperplane in three-dimensional space. The dots surrounding the hyperplane represent the observed data.](3d_plain.png)
+
+The general notation of the model is: $$ Y = \beta_0 + \beta_1X_1 + \beta_2X_2 + ... + \beta_qX_q + \epsilon $$
+
+where
+
+$𝑌$ is the value of the response variable;
+
+$𝑋_j$ is the value of the $j$𝑡ℎ explanatory variable;
+
+$𝛽_0$ is the intercept, and $𝛽_j$ is the partial slope of the $j$𝑡ℎ explanatory variable;
+
+$𝜖$ is that part of $𝑌$ which is not explained by the regression (i.e. the error).
+
+The parameters, $𝛽_0,𝛽_1,𝛽_2,…𝛽_𝑞$, must be estimated from the data. The parameter estimates, $𝛽_0,𝛽_1,𝛽_2,…𝛽_𝑞$, are estimated by R using the method of least squares.
+
+The formula of the fitted model is: $Y = \beta_0 + \beta_1X_1 + \beta_2X_2 + ... + \beta_qX_q$
+
+Hypotheses concerning the parameters can be tested. For example, for a particular 𝑗=1,…,𝑞:
+
+**𝐻0**: $𝛽_𝑗=0$ ( $𝑋_𝑗$ does not “contribute” to the explanation of $𝑌$)
+
+**𝐻1**: $𝛽_𝑗≠0$ ( $𝑋_𝑗$ does “contribute” to the explanation of $𝑌$)
 
 # Load required packages
 
@@ -17,9 +45,13 @@ library(MASS)
 
 ```{r}
 chap7data2 <- read.csv("chap7data2.csv", sep=",", header=T)
+dim(chap7data2)
+head(chap7data2)
+
 chap7data3 <- read.csv("chap7data3.csv", sep=",", header=T)
-View(chap7data2)
-View(chap7data3)
+dim(chap7data3)
+head(chap7data3)
+
 ```
 
 #scatter plot
@@ -56,7 +88,7 @@ scatterplotMatrix(~Detox + Enzyme1 + Enzyme2 + Enzyme3 + Enzyme4 + Enzyme5,
                   levels = c(0.5, 0.9),
                   id.n = 0,
                   diagonal = 'density',
-                  data = chap7data2)
+                  data = chap7data2) |> suppressWarnings()
 ```
 
 ## Interpretation
@@ -65,28 +97,33 @@ This document provides an interpretation of the scatterplot matrix that includes
 
 ### 1. Relationships Between `Detox` and Each Enzyme
 
+Examine row-wise.
+
 -   **`Detox` vs. `Enzyme1`**:\
     There is a positive linear relationship, as indicated by the upward trend in the scatter plot. The regression line is slightly upward, and the points are moderately scattered around it, suggesting a moderate positive correlation.
 
 -   **`Detox` vs. `Enzyme2`**:\
-    The scatter plot shows a very weak relationship with a mostly horizontal regression line. The points are widely scattered without any discernible pattern, suggesting little to no linear relationship between `Detox` and `Enzyme2`.
+    The plot shows a positive linear relationship, as evidenced by the upward trend and a moderately steep regression line. The points are widely scattered without any discernible pattern, suggesting little to no linear relationship between `Detox` and `Enzyme2`.
 
 -   **`Detox` vs. `Enzyme3`**:\
     The plot shows a positive linear relationship, as evidenced by the upward trend and a moderately steep regression line. Points are somewhat dispersed, but there is a noticeable trend suggesting a moderate positive correlation.
 
 -   **`Detox` vs. `Enzyme4`**:\
-    There appears to be a slight negative linear relationship. The regression line slopes downward, but the points are widely scattered. This suggests a weak negative correlation between `Detox` and `Enzyme4`.
+    The plot shows a positive linear relationship, as evidenced by the upward trend and a moderately steep regression line. The points are widely scattered. This suggests a moderately correlation between `Detox` and `Enzyme4`.
 
 -   **`Detox` vs. `Enzyme5`**:\
-    The scatter plot indicates a weak relationship with a relatively flat regression line. The points are fairly scattered, with no clear trend, suggesting little to no linear correlation between `Detox` and `Enzyme5`.
+    The scatter plot indicates a weak relationship with a relatively flat, slightly negative, regression line. The points are fairly scattered, with no clear trend, suggesting little to no linear correlation between `Detox` and `Enzyme5`.
 
 ### 2. Relationships Among Explanatory Variables (`Enzyme1` to `Enzyme5`)
 
 -   **`Enzyme1` vs. `Enzyme2`**:\
-    There is a noticeable positive linear relationship with an upward trend. The regression line is moderately steep, and points are clustered around it, indicating a moderate positive correlation.
+    There is a slight negative linear relationship with an downward trend. The regression line is mildy flat, and points are dispersed, indicating a slight negative correlation to little correlation.
 
 -   **`Enzyme1` vs. `Enzyme3`, `Enzyme4`, `Enzyme5`**:\
     All these plots show relatively moderate positive linear relationships, with upward trends and points moderately clustered around the regression lines.
+
+-   **`Enzyme1` vs. `Enzyme5`**:\
+    There is a strong negative linear relationship with an downward trend. The regression line is steep and downwards sloping, and points are relatively clustered, indicating a strong negative correlation.
 
 -   **`Enzyme2` vs. `Enzyme3`**:\
     The relationship appears to be non-linear, with points forming a curved pattern. This suggests a non-linear relationship between `Enzyme2` and `Enzyme3`.
@@ -120,14 +157,25 @@ This document provides an interpretation of the scatterplot matrix that includes
 # Multiple linear regression
 
 ```{r}
-chap7data2.model1 <- lm(Detox~.,data=chap7data2)
+chap7data2.model1 <- lm(Detox~.,data=chap7data2) 
+# the `.` is shorthand to denote all predictor (i.e., X_j) variables 
+# to be included in the model
+
+# Alternatively, you can specify the variables independently:
+# chap7data2.model1 <- lm(Detox ~ Enzyme1 + Enzyme2 + Enzyme3 + 
+# Enzyme4 + Enzyme5, data=chap7data2)
+
 summary(chap7data2.model1)
 ```
 
 ## #the allSubsets() function
 
 ```{r}
-allSubsets <- function(data,y.name="Y",perf.measure=c("adj.r.squared","r.squared","AIC","perc.error")){
+allSubsets <- function(data,y.name="Y",
+                       perf.measure=c("adj.r.squared","r.squared",
+                                      "AIC","perc.error")
+                       )
+ {
   
   Cols <- names(data)
   Cols <- Cols[! Cols %in% y.name]
@@ -147,39 +195,65 @@ allSubsets <- function(data,y.name="Y",perf.measure=c("adj.r.squared","r.squared
   result.mat[,1] <- Formulas
   
   #get all adjusted R2 values
-  for(i in 1:length(Formulas)){result.mat[i,2] <- summary(lm(as.formula(Formulas[i]),
-                                                             data=data))$adj.r.squared}
+  for(i in 1:length(Formulas)){
+   result.mat[i,2] <- summary(
+    lm(
+    as.formula(Formulas[i]), data=data)
+   )$adj.r.squared
+  }
+  
   #get all R2 values
-  for(i in 1:length(Formulas)){result.mat[i,3] <- summary(lm(as.formula(Formulas[i]),
-                                                             data=data))$r.squared}
+  for(i in 1:length(Formulas)){
+   result.mat[i,3] <- summary(
+    lm(
+     as.formula(Formulas[i]), data=data)
+    )$r.squared
+  }
+  
   #get all AIC's
+  for(i in 1:length(Formulas)){
+   result.mat[i,4] <- AIC(
+    lm(
+     as.formula(Formulas[i]), data=data)
+   )
+  }
   
-  for(i in 1:length(Formulas)){result.mat[i,4] <- AIC(lm(as.formula(Formulas[i]),
-                                                         data=data))}
   #get all sigma's
+  for(i in 1:length(Formulas)){
+   result.mat[i,5] <- summary(
+    lm(
+     as.formula(Formulas[i]), data=data
+     )
+   )$sigma/mean(data[,y.name])
+  }
   
-  for(i in 1:length(Formulas)){result.mat[i,5] <- summary(lm(as.formula(Formulas[i]),
-                                                             data=data))$sigma/mean(data[,y.name])}
   #get all mallows cp's
+  for(i in 1:length(Formulas)){
+   result.mat[i,6] <- mallows.cp(data=data,model=lm(
+    as.formula(Formulas[i]), data=data), y.name=y.name)
+   }
   
-  for(i in 1:length(Formulas)){result.mat[i,6] <- mallows.cp(data=data,model=lm(as.formula(Formulas[i]),
-                                                                                data=data),y.name=y.name)}
+  colnames(result.mat) <- c("Model",
+                            "adj.r.squared",
+                            "r.squared",
+                            "AIC","perc.error",
+                            "mallows.cp")
+ 
   
-  
-  
-  colnames(result.mat) <- c("Model","adj.r.squared","r.squared","AIC","perc.error","mallows.cp")
-  
-
-  
-  final.output <- data.frame(result.mat[order(result.mat[,perf.measure],decreasing=T),])
+  final.output <- data.frame(
+   result.mat[order(result.mat[,perf.measure],decreasing=T),]
+   )
   
   return(final.output)
   
 }
-
 ```
 
 ## calculating the Mallow's Cp statistic (function)
+
+**Goal:** Choose models where Cp $≈$ p
+
+**Interpretation:** Helps select models with a good balance of fit and complexity.
 
 ```{r}
 mallows.cp <- function(data,model,y.name)
@@ -188,7 +262,11 @@ mallows.cp <- function(data,model,y.name)
   n <- nrow(data)
   p <- length(model$coefficients)
   
-  mean.sq.error <- summary(lm(as.formula(paste(y.name,"~.")),data=data))$sigma^2
+  mean.sq.error <- summary(
+   lm(
+    as.formula(paste(y.name,"~.")),data=data
+    )
+   )$sigma^2
   
   sse <- summary(model)$sigma^2*summary(model)$df[2]
   
@@ -240,8 +318,6 @@ Based on the regression analysis and the adjusted R-squared values for various m
 
 The best model based on adjusted R-squared is `Detox ~ Enzyme1 + Enzyme2 + Enzyme3`, which explains 68.23% of the variance in `Detox`. Models with fewer variables generally have lower adjusted R-squared values and may not provide sufficient explanatory power, while models with negative adjusted R-squared values should be discarded as they do not fit the data well.
 
-
-
 # Another example with data 3
 
 ```{r}
@@ -249,6 +325,11 @@ chap7data3.model1 <- lm(Y~.,data=chap7data3)
 #chap7data3.model1 <- lm(Y~X1+X2+X3+X4,data=chap7data3)
 summary(chap7data3.model1)
 
+
+# Test for multicollinearity and variable influence using Variable Influence Factor [vif()] 
+# VIF equal to 1 = variables are not correlated
+# VIF between 1 and 5 = variables are moderately correlated 
+# VIF greater than 5 = variables are highly correlated
 vif(chap7data3.model1)
 
 base::plot(chap7data3)
@@ -277,9 +358,32 @@ shapiro.test(chap7data3.model3$residuals)
 #Assess homoscedasticity
 
 ```{r}
-plot(y=chap7data3.model3$residuals,x=chap7data3.model3$fitted.values,main="Residuals vs Yhat",ylab="residuals",xlab="Yhat")
+plot(y=chap7data3.model3$residuals,x=chap7data3.model3$fitted.values,
+     main="Residuals vs Yhat",ylab="residuals",xlab="Yhat")
 ```
 
+# Exercises
 
-# Exercises 
-Do all the exercices in page 58 on document "Biometry 721/821 Workbook(2024).pdf"
+## Exercise 1
+
+Use the `swiss` dataset in R (do this by running the code `data(swiss)` ) to fit a multiple linear regression model of `Fertility` on the other variables, and find the best fitting model according to Mallows’ $𝐶𝑝$ criterion. Do this using all department observations (i.e., rownames) except `Moutier` (i.e.m the 4th observation/row).
+
+To know more about the dataset, you can type and run `?swiss` in the R console.
+
+For this final model:
+
+-   Test the model assumptions
+
+-   Interpret the regression coefficients (parameter estimates)
+
+-   Interpret the coefficient of determination ($𝑅^2$)
+
+-   Predict Fertility for Moutier using the collected data for the department. What is the prediction? How does the predicted value and observed value compare to the predicted interval?
+
+## Exercise 2 and further reading
+
+### Polynomial regression 
+
+See pdf file [Biometry 721-821 Workbook (2024),]{.underline} Chapter 7, Section 2, pages 52-54 on polynomial regression.
+
+With the data from C&S Example 8.1, p. 90 (chap8exer1.csv): Fit a quadratic regression model of wheat yield ($𝑌$) on nitrogen fertilizer ($𝑋$) and give the equation of the regression line, as well as the coefficient of determination $𝑅^2$. Also check that the assumptions of this polynomial regression model are justified. Does the quadratic model fit the data better than the simple linear regression (straight-line) model?

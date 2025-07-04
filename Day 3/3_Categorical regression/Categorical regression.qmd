@@ -1,20 +1,19 @@
 ---
 title: "Categorical regression"
-format: html
+format: pdf
 editor: visual
 ---
 
-#Required pacakges 
+#Required pacakges
 
 ```{r}
-install.packages("ROCR")
+# install.packages("ROCR")
 library(RcmdrMisc)
 library(ggplot2)
 library(ROCR)
 ```
 
-#Functions 
-##the allSubsets() function
+#Functions ##the allSubsets() function
 
 ```{r}
 allSubsets.LogistReg <- function(data,y.name="Y",perf.measure=c("AIC","BIC")){
@@ -79,7 +78,7 @@ calcGini <- function(model,Y){
 
 ```
 
-#ROC Curve 
+#ROC Curve
 
 ```{r}
 performance <- function(prediction.obj, measure,
@@ -1776,37 +1775,37 @@ ROC.curve.test<-function(model, testSet, response,plotTitle="ROC Curve"){
 
 ##Interactively show graphs in lectures
 
-```{r}
-install.packages("manipulate")
-library(manipulate)
-
-
-
-#Logistic regression
-
-x <- seq(-10,10,len=1000)
-
-manipulate(
-  
-  plot(x,exp(beta0+beta1*x) / (1+exp(beta0+beta1*x)),
-       type="l",lwd=3,frame=FALSE,ylim=c(0,1)),
-  beta1 = slider(-2,2,step=.1,initial=2),
-  beta0 = slider(-2,2,step=.1,initial=0)
-  
-)
-
-
-#Simple linear regression
-
-
-x <- seq(-10,10,len=100)
-
-manipulate(
-  plot(x=x,y=beta0+beta1*x, xlim = c(-15, 15), type = "l", ylim=c(-20,20)),
-  beta1 = slider(-5,5,step=0.5,initial=2),
-  beta0 = slider(-10,10,step=1,initial=-1)
- 
- )
+```{r echo=FALSE}
+# install.packages("manipulate")
+# library(manipulate)
+# 
+# 
+# 
+# #Logistic regression
+# 
+# x <- seq(-10,10,len=1000)
+# 
+# manipulate(
+#   
+#   plot(x,exp(beta0+beta1*x) / (1+exp(beta0+beta1*x)),
+#        type="l",lwd=3,frame=FALSE,ylim=c(0,1)),
+#   beta1 = slider(-2,2,step=.1,initial=2),
+#   beta0 = slider(-2,2,step=.1,initial=0)
+#   
+# )
+# 
+# 
+# #Simple linear regression
+# 
+# 
+# x <- seq(-10,10,len=100)
+# 
+# manipulate(
+#   plot(x=x,y=beta0+beta1*x, xlim = c(-15, 15), type = "l", ylim=c(-20,20)),
+#   beta1 = slider(-5,5,step=0.5,initial=2),
+#   beta0 = slider(-10,10,step=1,initial=-1)
+#  
+#  )
 
 
 ```
@@ -1823,7 +1822,6 @@ View(chap10data2)
 View(chap10data3)
 View(chap10data4)
 ```
-
 
 #Create data.frame for colour blind example
 
@@ -1848,7 +1846,6 @@ chisq.test(chap10.data1.table1, correct=FALSE)$expected
 fisher.test(chap10.data1.table1)
 ```
 
-
 #Example 2
 
 ```{r}
@@ -1859,8 +1856,7 @@ fisher.test(chap10.data2.table1)
 
 ```
 
-#Example 3
-#fit logistic regression model
+#Example 3 #fit logistic regression model
 
 ```{r}
 unique(chap10data3$Died)
@@ -1907,7 +1903,6 @@ chap10data3.model1.gini <- abs(1-2*attr(chap10data3.model1.auc,'y.values')[[1]])
 
 ```{r}
 influence.measures(chap10data3.model1)
-influence.cutoffs(chap10data3.model1)
 ```
 
 #confusion matrix
@@ -1919,23 +1914,20 @@ table(chap10data3[,c("Died","preds")])
 
 ```
 
-
-#Example 4
-#Visualise data
+#Example 4 #Visualise data
 
 ```{r}
-# Filter data for 'Died' == "No" and remove rows with missing values in 'Birthweight' or 'Apgar.score'
-filtered_data <- subset(chap10data4, Died == "No" & !is.na(Birthweight) & !is.na(Apgar.score))
+# Filter data for 'Died' == "No" and remove rows with missing values in 'Birthweight' or 'Apgar_score'
+filtered_data <- subset(chap10data4, Died == "No" & !is.na(Birthweight) & !is.na(Apgar_score))
 
 # Plot the data
-#plot(x = filtered_data$Apgar.score, 
+#plot(x = filtered_data$Apgar_score, 
     # y = filtered_data$Birthweight, 
      #col = "blue", 
      #xlab = "Apgar Score", 
      #ylab = "Birthweight", 
      #main = "Birthweight vs Apgar Score (Died = No)")
 ```
-
 
 ```{r}
 filtered_data <- subset(chap10data4, Died == "No" & !is.na(Birthweight) & !is.na(Apgar_score))
@@ -1952,8 +1944,9 @@ scatterplotMatrix(~Birthweight + Apgar_score + Temperature,data=chap10data4,
 #fit logistic regression model
 
 ```{r}
-chap10data4$Died <- ifelse(chap10data3$Died == "Yes", 1, 0)
-chap10data4.model1 <- glm(Died ~ ., family=binomial(), data=chap10data4)
+chap10data4$Died <- chap10data4$Died <- factor(chap10data4$Died, 
+                                               levels = c("No", "Yes"))
+chap10data4.model1 <- glm(as.factor(Died) ~ ., family=binomial(), data=chap10data4)
 summary(chap10data4.model1)
 ```
 
@@ -1980,11 +1973,6 @@ summary(chap10data4.model2)
 #Assess the final model
 
 ```{r}
-chap10data4$Died <- factor(chap10data4$Died, levels = c("No", "Yes"))
-```
-
-
-```{r}
 # Fit the logistic regression model
 chap10data4.model2 <- glm(Died ~ Birthweight + Apgar_score, family = binomial(), data = chap10data4)
 
@@ -1997,8 +1985,6 @@ chap10data4$Preds <- ifelse(chap10data4$Probs >= 0.2, "Yes", "No")
 # Convert predictions to a factor
 chap10data4$Preds <- factor(chap10data4$Preds, levels = c("No", "Yes"))
 ```
-
-
 
 ```{r}
 ```
@@ -2015,7 +2001,5 @@ mean(chap10data4$Preds!=chap10data4$Died)
 #predicting with the final model
 
 ```{r}
-predict(chap10data4.model2,newdata=data.frame(Delivery.mode="Caesarean",Birthweight=1000,Apgar.score=6),type="response")
+predict(chap10data4.model2,newdata=data.frame(Delivery.mode="Caesarean",Birthweight=1000,Apgar_score=6),type="response")
 ```
-
-
