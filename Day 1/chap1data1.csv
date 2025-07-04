@@ -44,6 +44,7 @@ Male,Married,Runs.per.week,Age,Income,College,Distance,Treadmill,Miles.per.week,
 1,0,6,29.5,42.5,0,0,0,17.5,5Other,1
 0,0,3,22.5,,1,0,1,5,3Treadmill,1
 1,0,2,29.5,112.5,1,0,0,5,5Other,1
+0,1,1,295,57.5,1,0,0,500,5Other,1
 1,0,6,16.5,20,0,0,0,5,5Other,3
 1,0,5,16.5,20,0,0,0,27.5,5Other,1
 1,0,4,22.5,57.5,1,1,0,22.5,2Half marathon,6
@@ -59,3 +60,4 @@ Male,Married,Runs.per.week,Age,Income,College,Distance,Treadmill,Miles.per.week,
 1,1,5,43.5,87.5,1,0,0,12.5,5Other,1
 1,1,7,29.5,57.5,1,0,0,47.5,5Other,1
 1,1,5,48.5,42.5,1,1,0,37.5,1Marathon,2
+1,1,5,61.5,57.5,1,0,0,27.5,5Other,3

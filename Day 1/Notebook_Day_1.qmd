@@ -1,7 +1,8 @@
 ---
-title: "Presentation"
-author: "Guy"
-format: html
+title: "Introduction to R programming - Day 1"
+subtitle: "Lusaka 9 - 11 July, 2025"
+author: "Francis Edwardes"
+format: pdf
 include-in-header: 
    - text: 
        \usepackage{tabularx}
@@ -348,7 +349,6 @@ my_function <- function(fname, lname) {
   paste(fname, lname)
 }
 
-#my_function("Peter") 
 my_function("Kirsten", "Denis") 
 
 ```
@@ -368,20 +368,121 @@ print(my_function(5))
 
 ### 2.1 Importing CSV file into R
 
-For importing data CSV file into R, we can use the following code. When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+For importing data CSV file into R, it is important to specify the working directory (folder name) that the data is stored in - either an internal or external hard drive.
+
+For example, this can be done with code that looks like the following (the code has been commented out to preserve the original working directory - it is shown for simple demonstration purposes).
+
+```{r}
+#setwd("C:/Users/user-name/My Documents/R Workshop/Day 1")
+```
+
+To check the working directory your R Session is working in you can use the following function.
+
+```{r}
+getwd()
+```
+
+Now to read the data into your R environment you use the `read.csv()` function and store it into an object named \`chap1data1.
 
 ```{r}
 chap1data1 <-read.csv("chap1data1.csv", sep=",", header=T)
 ```
 
-### 2.2 Visualize the data
+Alternatively, you can specify directory path to the stored data directly to the \`read.csv()\` function. This helps when your working directory is set elsewhere, and you want to access data stored in a different directory. (The code has been commented out to to serve as a simple example.)
 
 ```{r}
-head(chap1data1)
-tail(chap1data1)
+# chap1data1 <- read.csv(
+#  "C:/Users/user-name/My Documents/R Workshop/Day 1/chap1data1.csv", 
+#  sep=",", header=T
+#  )
 ```
 
-### 2.3 Categorical variables
+### 2.2 Viewing the data
+
+```{r}
+dim(chap1data1)
+head(chap1data1)
+tail(chap1data1)
+
+```
+
+### 2.3 Missing values
+
+Finding and addressing missing values is a key step in preparing a clean dataset for analysis.
+
+To identify missing values within the variables of a dataset, we can use the `apply()` function. This function lets us apply a custom operation, such as checking for `NA` values, across either rows or columns by specifying the `MARGIN` argument. Use `MARGIN = 1` to apply a function row-wise, and `MARGIN = 2` to apply it column-wise.
+
+```{r}
+apply(X = chap1data1, MARGIN = 2, FUN = is.na)
+```
+
+As you can see, this produces a TRUE or FALSE output for each value of the dataset. This might be a bit much for a dataset that has many (i.e., thousands) of entries for us to check individually. We might be interest in understanding if at least 1 missing value is present.
+
+In the example below, we use `apply(chap1data1, 2, function(x) any(is.na(x)))` to check whether each column in `chap1data1` contains any missing values. The result is a logical vector indicating which variables have at least one `NA`.
+
+```{r}
+apply(X = chap1data1, MARGIN = 2, FUN = function(x) any(is.na(x)))
+```
+
+We find that the `Income` variable is the only variable to contain at least one missing value. If a basic criterion of your analysis is to keep complete observations only - the observations with missing values can be removed. To remove observations (i.e., the rows) corresponding to the missing values of the variable from the dataset we can use the code below.
+
+```{r}
+chap1data1 <- chap1data1[which(!is.na(chap1data1$Income)), ]
+```
+
+Now, check how many observations exist in the updated dataset.
+
+```{r}
+dim(chap1data1)
+```
+
+### 2.4 Outliers
+
+For demonstrative purposes, let's use one variable, in this case `Age` to check if any outlines exist within it. Let's look at the range and quantiles of `Age`.
+
+```{r}
+range(chap1data1$Age)
+quantile(chap1data1$Age)
+```
+
+Looks like there could be at least one outlying value - who can be 295 years old, and still running?!?!
+
+Right, let's find the outlier(s) mathematically using the interquartile range method with the `IQR()`function.
+
+```{r}
+# Compute Q1 and Q3
+Q1 <- quantile(chap1data1$Age, 0.25)
+Q3 <- quantile(chap1data1$Age, 0.75)
+
+# Compute IQR
+IQR_value <- IQR(chap1data1$Age)
+
+# Define bounds
+lower_bound <- Q1 - 1.5 * IQR_value
+upper_bound <- Q3 + 1.5 * IQR_value
+
+# Identify outliers
+outliers <- chap1data1$Age[chap1data1$Age < lower_bound | 
+                            chap1data1$Age > upper_bound]
+
+# View result
+outliers
+```
+
+Let's examine these observations a little closer.
+
+```{r}
+chap1data1[which(chap1data1$Age %in% outliers), ]
+```
+
+It seems there is one observation that is likely to be a data entry error, while the other entry seems to demonstrate natural variation in the sample. Based on our contextual understanding of the sample, we decide to remove the observation corresponding to the outlier in age likely due to a data entry error, while keeping the observation likely to represent natural variation.
+
+```{r}
+chap1data1 <- chap1data1[chap1data1$Age < 295, ]
+dim(chap1data1)
+```
+
+### 2.5 Categorical variables
 
 To prevent categorical variables from being treated as numerical data, we need to define them as factors.
 
@@ -394,18 +495,19 @@ chap1data1$Treadmill <- as.factor(chap1data1$Treadmill)
 chap1data1$Shoes <- as.factor(chap1data1$Shoes) 
 ```
 
-### 2.4 Installing and loading required packages
+### 2.6 Installing and loading required packages
 
 To find out more of a specific package run the ??\[package name\]
 
 ```{r}
+options(repos = c(CRAN = "https://cloud.r-project.org"))
 install.packages('RcmdrMisc')
 library(RcmdrMisc)
 ```
 
-### 2.5 Summary statistics
+### 2.7 Summary statistics
 
-We can get summary statistics of a spesific variable, or all variables. The function numSummary can be used to get spesific statistics
+We can get summary statistics of a specific variable, or all variables. The function numSummary can be used to get specific statistics
 
 mean: measure of centrality sd: standard deviation measure of distribution skewness: measure of distribution and normality kurtosis: indication of form of frequency distribution
 
@@ -417,7 +519,7 @@ sapply(chap1data1,summary)
 numSummary(chap1data1[,"Age"],statistics=c("mean","sd","skewness","kurtosis"))
 ```
 
-### 2.6 Visualisation
+### 2.8 Visualisation
 
 Below is a list of different type of graphs used according to a given data type:
 
@@ -435,63 +537,70 @@ We will use two plotting systems in R in this presentation:
 
 Let us start with plotting the aforementioned list of different type of graphs with the R base plot
 
-#### 2.6.1 Bars plot
+#### 2.8.1 Bars plot
 
 ```{r}
 ##Type of running
-barplot(table(chap1data1$Type.of.running),main="Type of Running",ylab="Frequency",xlab="Type of Running")
-#barplot(table(chap1data1[,"Type.of.running"]),main="Type of running",ylab="Frequency",xlab="Type of running",width=1,space=0)
+barplot(table(chap1data1$Type.of.running),
+        main="Type of Running",ylab="Frequency",xlab="Type of Running")
+
 ```
 
-#### 2.6.2 Line plot
+#### 2.8.2 Line plot
 
 ```{r}
 ###Shoes
-#chap1data1[,"Shoes"]
-
-#plot(chap1data1[,"Shoes"],main="Type of Shoes",ylab="Frequency",xlab="Type of Shoes",col="red")
-barplot(table(chap1data1[,"Shoes"]),main="Type of Shoes",ylab="Frequency",xlab="Type of Shoes",col="green", width =1, space =100)
+barplot(table(chap1data1[,"Shoes"]),
+        main="Type of Shoes",ylab="Frequency",xlab="Type of Shoes",
+        col="green", width =1, space =100)
 ```
 
-#### 2.6.4 Histogram
+#### 2.8.4 Histogram
 
 ```{r}
 ##Age
 hist(chap1data1[,"Age"],main="Histogram for Age",xlab="Age")
 ```
 
-#### 2.6.5 Pie chart
+#### 2.8.5 Pie chart
 
 ```{r}
 ###Type of running
 pie(table(chap1data1[,"Type.of.running"]),main="Pie chart for types of running")
 ```
 
-#### 2.6.5 Scatterplot
+#### 2.8.5 Scatterplot
 
 ```{r}
 ## Age and Miles.per.week 
-plot(x=chap1data1[,"Age"],y=chap1data1[,"Miles.per.week"], main="Age vs Miles per week",ylab="Miles per week",xlab="Age")
+plot(x=chap1data1[,"Age"],y=chap1data1[,"Miles.per.week"], 
+     main="Age vs Miles per week",ylab="Miles per week",xlab="Age")
 ```
 
-#### 2.6.6 Box plot
+#### 2.8.6 Box plot
 
 ```{r}
 ## Miles.per.week
-boxplot(chap1data1[,"Miles.per.week"],main="Miles per week Boxplot",ylab="Miles per week",xlab="")
+boxplot(chap1data1[,"Miles.per.week"],
+        main="Miles per week Boxplot",ylab="Miles per week",xlab="")
 ```
 
-#### 2.6.7 Box plot by groups
+#### 2.8.7 Box plot by groups
 
 ```{r}
 ## Miles.per.week by Shoes
-boxplot(Miles.per.week~Shoes,data=chap1data1,main="Miles per week by Shoes Boxplot",ylab="Miles per week",xlab="Shoes")
+boxplot(Miles.per.week~Shoes,data=chap1data1,
+        main="Miles per week by Shoes Boxplot",ylab="Miles per week",xlab="Shoes")
 ```
 
 To use the ggplot plotting system you need to install the package first and load it into R
 
 ```{r}
-install.packages('ggplot2')
+if(!"ggplot2" %in% installed.packages()[, "Package"])
+{
+ install.packages('ggplot2')
+}
+
 library(ggplot2)
 
 #or do the following
@@ -505,7 +614,7 @@ library(ggplot2)
 
 Construct the same graphs (except the line plot) with ggplot plotting system.
 
-#### 2.6.8 Bar plot -- Shoes
+#### 2.8.8 Bar plot -- Shoes
 
 ```{r}
 barplot <- ggplot(data=chap1data1,aes(x=Shoes)) +
@@ -516,7 +625,7 @@ theme(plot.title=element_text(size=20),axis.title=element_text(size=
 14))
 ```
 
-### 2.6.9 Bar plot by groups -- Shoes by Male
+### 2.8.9 Bar plot by groups -- Shoes by Male
 
 ```{r}
 barplot2 <- ggplot(data=chap1data1,aes(x=Shoes,y=Miles.per.week))
@@ -525,14 +634,14 @@ position=position_dodge(),stat="identity") +
 scale_fill_manual(values=c("#CC6666","#66CC99"))
 ```
 
-#### 2.6.10 Histogram -- Age
+#### 2.8.10 Histogram -- Age
 
 ```{r}
 histo <- ggplot(chap1data1,aes(x=Age))
 histo + geom_histogram(binwidth=6)
 ```
 
-#### 2.6.11 Pie chart -- Shoes
+#### 2.8.11 Pie chart -- Shoes
 
 ```{r}
 pie <- ggplot(data=chap1data1,aes(x=factor(1),fill=Shoes))+
@@ -540,14 +649,14 @@ geom_bar(width = 1)
 pie + coord_polar("y")
 ```
 
-#### 2.6.12 Scatter plot -- Runs.per.week vs Age
+#### 2.8.12 Scatter plot -- Runs.per.week vs Age
 
 ```{r}
 ggplot(data=chap1data1,aes(y=Runs.per.week,x=Age)) +
 geom_point(shape=3,color="darkblue")
 ```
 
-#### 2.6.13 Scatter plot -- Runs.per.week vs Age by Distance
+#### 2.8.13 Scatter plot -- Runs.per.week vs Age by Distance
 
 ```{r}
 scatter <-
@@ -556,24 +665,45 @@ scatter + geom_point(size=2) +
 scale_color_manual(values=c("#CC6666","#66CC99"))
 ```
 
-#### 2.6.14 Scatter plot -- Runs.per.week vs Age by Distance (with trend lines)
+#### 2.8.14 Scatter plot -- Runs.per.week vs Age by Distance (with trend lines)
 
 ```{r}
 scatter2 <-
-ggplot(data=chap1data1,aes(y=Runs.per.week,x=Age,color=Distance))
-scatter2 + geom_point(size=2) +
+ggplot(data=chap1data1,aes(y=Runs.per.week,x=Age,color=Distance)) +
+geom_point(size=2) +
 scale_color_manual(values=c("#CC6666","#66CC99")) +
 geom_smooth(method=lm,se=F)
+
+scatter2
 ```
 
-#### 2.6.15 Box plot -- Miles.per.week by Distance
+#### 2.8.15 Box plot -- Miles.per.week by Distance
 
 ```{r}
 ggplot(chap1data1,aes(factor(Distance),Miles.per.week)) +
 geom_boxplot()
 ```
 
-#### 2.6.15 Exercises
+## 2.9 Exporting data visualisations
+
+The `scatter2` object is used to demonstrate how to export a visualisation.
+
+```{r}
+# Save the scatter2 plot to a PNG file
+ggsave(
+  filename = "scatter2_plot.png",  # name of the output file
+  plot = scatter2,                 # the ggplot object to save
+  width = 8,                       # width in inches
+  height = 6,                      # height in inches
+  dpi = 300                        # resolution (dots per inch)
+)
+
+# Save the scatter2 plot to a PDF file
+# This creates a vector graphic that scales well, ideal for reports or print.
+ggsave("scatter2_plot.pdf", plot = scatter2, width = 8, height = 6)
+```
+
+## 3. Exercises
 
 ##### Exercise 1
 
